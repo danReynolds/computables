@@ -9,3 +9,4 @@ part 'computable_stream.dart';
 part 'computation.dart';
 part 'computable_mixin.dart';
 part 'computable.dart';
+part 'computable_subscriber.dart';
