@@ -10,12 +10,28 @@ class Computable<T> with ComputableMixin<T> {
     init(initialValue, broadcast: broadcast);
   }
 
+  static Computable<S> fromIterable<S>(
+    Iterable<S> iterable, {
+    bool broadcast = false,
+  }) {
+    if ((S != Optional<S>) && iterable.isEmpty) {
+      throw 'missing iterable value for non-nullable type.';
+    }
+
+    final computable = Computable(iterable.first);
+    for (final value in iterable.skip(1)) {
+      computable.add(value);
+    }
+
+    return computable;
+  }
+
   static Computable<S> fromFuture<S>(
     Future<S> future, {
     S? initialValue,
     bool broadcast = false,
   }) {
-    if ((S == Optional<S>) && initialValue == null) {
+    if ((S != Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type.';
     }
 
@@ -31,7 +47,7 @@ class Computable<T> with ComputableMixin<T> {
     S? initialValue,
     bool broadcast = false,
   }) {
-    if ((S == Optional<S>) && initialValue == null) {
+    if ((S != Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type';
     }
 
@@ -85,6 +101,16 @@ class Computable<T> with ComputableMixin<T> {
     return Computation<T>(
       computables: [computable1, computable2, computable3, computable4],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2], inputs[3]),
+      broadcast: broadcast,
+    );
+  }
+
+  static ComputableSubscriber<T> subscriber<T>({
+    T? initialValue,
+    bool broadcast = false,
+  }) {
+    return ComputableSubscriber<T>(
+      initialValue: initialValue,
       broadcast: broadcast,
     );
   }

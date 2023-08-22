@@ -32,7 +32,12 @@ mixin ComputableMixin<T> {
     });
 
     _prevValue = _value = initialValue;
-    _controller.add((_prevValue, _value));
+
+    /// Emit the initial value immediately on the controller if either it is non-null
+    /// or the type of the [Computable] is optional.
+    if (_value != null || T == Optional<T>) {
+      _controller.add((_prevValue, _value));
+    }
   }
 
   void dispose() {

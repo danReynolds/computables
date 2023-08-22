@@ -7,7 +7,7 @@ class ComputableSubscriber<T> with ComputableMixin<T> {
     T? initialValue,
     bool broadcast = false,
   }) {
-    if ((T == Optional<T>) && initialValue == null) {
+    if ((T != Optional<T>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type';
     }
 
@@ -25,10 +25,14 @@ class ComputableSubscriber<T> with ComputableMixin<T> {
 
   /// Subscribes the subscriber [Computable] to the provided source [Computable].
   StreamSubscription<S> subscribe<S>(
-    Computable<S> computable,
+    Computable<S?> computable,
     void Function(S data) listener,
   ) {
-    final subscription = computable.stream().listen(listener);
+    final subscription = computable
+        .stream()
+        .where((value) => value is S)
+        .cast<S>()
+        .listen(listener);
     _subscriptions.add(subscription);
     return subscription;
   }
@@ -38,7 +42,7 @@ class ComputableSubscriber<T> with ComputableMixin<T> {
     Stream<S> stream,
     void Function(S data) listener,
   ) {
-    return subscribe(Computable.fromStream(stream), listener);
+    return subscribe(Computable.fromStream<S?>(stream), listener);
   }
 
   /// Subscribes the subscriber [Computable] to the provided source [Future].
@@ -46,17 +50,20 @@ class ComputableSubscriber<T> with ComputableMixin<T> {
     Future<S> future,
     void Function(S data) listener,
   ) {
-    return subscribe(Computable.fromFuture(future), listener);
+    return subscribe(Computable.fromFuture<S?>(future), listener);
   }
 
   /// Subscribes the [Computable] to the provided source computable sstream and forwards the values it emits
   /// onto the [Computable].
   StreamSubscription<T> forward(
-    Computable<T> computable, {
+    Computable<T?> computable, {
     bool disposeOnDone = true,
   }) {
-    final subscription = subscribe(computable, add)
+    StreamSubscription<T>? subscription;
+    subscription = subscribe(computable, add)
       ..onDone(() {
+        subscription!.cancel();
+
         if (disposeOnDone) {
           dispose();
         }
@@ -65,8 +72,8 @@ class ComputableSubscriber<T> with ComputableMixin<T> {
     return subscription;
   }
 
-  /// Subscribes the [Computable] to the provided [Stream] and forwards the values it emits
-  /// onto the [Computable].
+  /// Subscribes the [Computable] to the provided source [Stream] and forwards the values it emits
+  /// onto the [Computable] stream.
   StreamSubscription<T> forwardStream(
     Stream<T> stream, {
     bool disposeOnDone = true,
@@ -74,9 +81,7 @@ class ComputableSubscriber<T> with ComputableMixin<T> {
     return forward(Computable.fromStream(stream));
   }
 
-  StreamSubscription<T> forwardFuture(
-    Future<T> future,
-  ) {
+  StreamSubscription<T> forwardFuture(Future<T> future) {
     return forward(Computable.fromFuture(future));
   }
 }
