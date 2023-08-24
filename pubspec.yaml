@@ -1,7 +1,7 @@
 name: computables
 description: Computables are composable, streamable values.
 version: 0.0.1
-homepage:
+homepage: https://github.com/danReynolds/computables
 
 environment:
   sdk: '>=3.0.6 <4.0.0'

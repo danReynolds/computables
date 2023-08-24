@@ -2,10 +2,58 @@ part of 'computables.dart';
 
 typedef ComputableChangeRecord<T> = (T prev, T next);
 
+class ValueStream<T> extends Stream<T> {
+  final Stream<ComputableChangeRecord<T>> Function() factory;
+
+  ValueStream(this.factory);
+
+  @override
+  StreamSubscription<T> listen(
+    void Function(T value)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return factory().map((record) {
+      final (_, val) = record;
+      return val;
+    }).listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+}
+
+class ValueChangeStream<T> extends Stream<ComputableChangeRecord<T>> {
+  final Stream<ComputableChangeRecord<T>> Function() factory;
+
+  ValueChangeStream(this.factory);
+
+  @override
+  StreamSubscription<ComputableChangeRecord<T>> listen(
+    void Function(ComputableChangeRecord<T> value)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return factory().listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+}
+
 /// A class that provides an observable interface for the access and streaming of stored values.
 mixin ComputableMixin<T> {
   late final StreamController<ComputableChangeRecord<T>> _controller;
-  late final Stream<T> _valueStream;
+  late ValueStream<T> _valueStream;
+  late ValueChangeStream<T> _changeStream;
+  bool _hasEmitted = false;
+
   late T _value;
   late T _prevValue;
   late final bool broadcast;
@@ -19,6 +67,8 @@ mixin ComputableMixin<T> {
     /// the term broadcast is to mean something different in the library compared to its usage in the underlying Dart [Stream] implementation.
     required bool broadcast,
   }) {
+    this.broadcast = broadcast;
+
     if (broadcast) {
       _controller = StreamController<ComputableChangeRecord<T>>.broadcast();
     } else {
@@ -26,18 +76,25 @@ mixin ComputableMixin<T> {
           StreamController<ComputableChangeRecord<T>>(onCancel: dispose);
     }
 
-    _valueStream = _controller.stream.map((record) {
-      final (_, next) = record;
-      return next;
-    });
+    _valueStream = ValueStream<T>(_streamFactory);
+    _changeStream = ValueChangeStream(_streamFactory);
 
     _prevValue = _value = initialValue;
 
     /// Emit the initial value immediately on the controller if either it is non-null
     /// or the type of the [Computable] is optional.
     if (_value != null || T == Optional<T>) {
-      _controller.add((_prevValue, _value));
+      add(initialValue);
     }
+  }
+
+  Stream<ComputableChangeRecord<T>> _streamFactory() {
+    // Broadcast stream controllers do not buffer events emitted when there are no listeners,
+    // so when a listener subscribes to the controller's stream, we provide it with the current value.
+    if (_hasEmitted && broadcast) {
+      return _controller.stream.startWith((_prevValue, _value));
+    }
+    return _controller.stream;
   }
 
   void dispose() {
@@ -53,8 +110,13 @@ mixin ComputableMixin<T> {
       return _value;
     }
 
+    if (!_hasEmitted) {
+      _hasEmitted = true;
+    }
+
     _prevValue = _value;
     _value = updatedValue;
+
     _controller.add((_prevValue, _value));
     return _value;
   }
@@ -68,6 +130,6 @@ mixin ComputableMixin<T> {
   }
 
   Stream<ComputableChangeRecord<T>> streamChanges() {
-    return _controller.stream;
+    return _changeStream;
   }
 }

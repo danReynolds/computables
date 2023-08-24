@@ -18,7 +18,7 @@ class Computable<T> with ComputableMixin<T> {
       throw 'missing iterable value for non-nullable type.';
     }
 
-    final computable = Computable(iterable.first);
+    final computable = Computable(iterable.first, broadcast: broadcast);
     for (final value in iterable.skip(1)) {
       computable.add(value);
     }

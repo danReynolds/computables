@@ -1,6 +1,6 @@
 part of computables;
 
-class ComputableSubscriber<T> with ComputableMixin<T> {
+class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
   final List<StreamSubscription> _subscriptions = [];
 
   ComputableSubscriber({

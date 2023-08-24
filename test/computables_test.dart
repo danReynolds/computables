@@ -13,6 +13,25 @@ void main() {
       computable.add(4);
       computable.add(6);
     });
+
+    test("non-broadcast computable buffers stream values", () {
+      // Non-broadcast stream controllers buffer events until they have a listener.
+      final computable = Computable(2);
+      computable.add(3);
+      expectLater(computable.stream(), emitsInOrder([2, 3]));
+    });
+
+    test("broadcast computable delivers latest value", () {
+      // Broadcast stream controllers do not buffer events even when there is no listener.
+      // Instead, for broadcast computables, we deliver the latest value of the computable whenever
+      // a listener subscribes.
+      final computable = Computable(2, broadcast: true);
+      computable.add(3);
+      computable.add(4);
+
+      expectLater(computable.stream(), emitsInOrder([4, emitsDone]));
+      computable.dispose();
+    });
   });
 
   group('Computable iterable', () {

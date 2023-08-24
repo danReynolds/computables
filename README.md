@@ -67,7 +67,7 @@ final computation = Computable.compute2(
 );
 
 Computable.compute2(
-  composable,
+  computation,
   Computable(1),
 ).stream().listen((value) {
   print(value);
