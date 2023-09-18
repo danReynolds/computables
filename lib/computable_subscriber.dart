@@ -25,32 +25,36 @@ class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
 
   /// Subscribes the subscriber [Computable] to the provided source [Computable].
   StreamSubscription<S> subscribe<S>(
-    Computable<S?> computable,
-    void Function(S data) listener,
-  ) {
+    Computable<S?> computable, [
+    void Function(S data)? listener,
+  ]) {
     final subscription = computable
         .stream()
         .where((value) => value is S)
         .cast<S>()
-        .listen(listener);
+        .listen((value) {
+      listener?.call(value);
+    });
     _subscriptions.add(subscription);
     return subscription;
   }
 
   /// Subscribes the subscriber [Computable] to the provided source [Stream].
   StreamSubscription<S> subscribeStream<S>(
-    Stream<S> stream,
-    void Function(S data) listener,
-  ) {
-    return subscribe(Computable.fromStream<S?>(stream), listener);
+    Stream<S> stream, [
+    void Function(S data)? listener,
+  ]) {
+    return subscribe(Computable.fromStream<S?>(stream), (value) {
+      listener?.call(value);
+    });
   }
 
   /// Subscribes the subscriber [Computable] to the provided source [Future].
-  StreamSubscription<S> subscribeFuture<S>(
-    Future<S> future,
-    void Function(S data) listener,
-  ) {
-    return subscribe(Computable.fromFuture<S?>(future), listener);
+  StreamSubscription<S> subscribeFuture<S>(Future<S> future,
+      [void Function(S data)? listener]) {
+    return subscribe(Computable.fromFuture<S?>(future), (value) {
+      listener?.call(value);
+    });
   }
 
   /// Subscribes the [Computable] to the provided source computable sstream and forwards the values it emits
@@ -78,10 +82,10 @@ class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
     Stream<T> stream, {
     bool disposeOnDone = true,
   }) {
-    return forward(Computable.fromStream(stream));
+    return forward(Computable.fromStream<T>(stream, initialValue: get()));
   }
 
   StreamSubscription<T> forwardFuture(Future<T> future) {
-    return forward(Computable.fromFuture(future));
+    return forward(Computable.fromFuture<T>(future, initialValue: get()));
   }
 }
