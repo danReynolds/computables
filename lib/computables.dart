@@ -9,6 +9,7 @@ part 'computable_stream.dart';
 part 'computation.dart';
 part 'computable_mixin.dart';
 part 'computable.dart';
+part 'computation_transform.dart';
 part 'computable_subscriber.dart';
 part 'extensions/stream/start_with.dart';
 part 'extensions/stream/transformer.dart';

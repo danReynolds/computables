@@ -1,3 +1,7 @@
+## 0.0.3
+
+* Adds support for [Computable] transforms.
+
 ## 0.0.2
 
 * Core API changes.

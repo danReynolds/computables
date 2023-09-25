@@ -23,8 +23,10 @@ class Computation<T> with ComputableMixin<T> implements Computable<T> {
         /// Skip the current value emitted by each [Computable] since the first computation value
         /// is pre-computed as one initial update by the call to [init].
         computable.stream().skip(1).listen((inputValue) {
-          _computableValues[i] = inputValue;
-          add(compute(_computableValues));
+          if (_computableValues[i] != inputValue) {
+            _computableValues[i] = inputValue;
+            add(compute(_computableValues));
+          }
         }, onDone: () {
           _completedSubscriptionCount++;
           if (_completedSubscriptionCount == _subscriptions.length) {
