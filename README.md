@@ -30,6 +30,8 @@ print(computable.get()) // 3
 
 ## Composable
 
+`Computables` can be composed together to 
+
 ```dart
 final computation = Computable.compute2(
   Computable.fromStream(
@@ -50,8 +52,6 @@ computation.stream().listen((value) {
   // 3
 });
 ```
-
-## Composable Composable
 
 ```dart
 final computation = Computable.compute2(
@@ -77,7 +77,39 @@ Computable.compute2(
 });
 ```
 
+## Transformable
+
+Computable inputs can be combined and transformed into an output computable:
+
+```dart
+final computable = Computable(1);
+final computable2 = Computable(2);
+
+final computation = Computable.transform2(
+  computable,
+  computable2,
+  (input1, input2) {
+    final fill = input2 - input1;
+    return Computable.fromIterable(
+      List.filled(fill, 0)
+    );
+  },
+).stream().listen((value) {
+  print('Value: $value');
+});
+// Value: 0
+
+computable2.add(5);
+
+// Value: 0
+// Value: 0
+// Value: 0
+// Value: 0
+```
+
 ## Forwardable
+
+It can be helpful to subscribe computables to other inputs like a [Future] or [Stream].
 
 ```dart
 final computable = Computable.subscriber(initialValue: 0);
