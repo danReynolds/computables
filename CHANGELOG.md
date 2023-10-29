@@ -1,3 +1,7 @@
+## 0.0.4
+
+* Revamp builder
+
 ## 0.0.3
 
 * Adds support for [Computable] transforms.
