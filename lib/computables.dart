@@ -2,7 +2,7 @@ library computables;
 
 import 'dart:async';
 
-export 'widgets/computable_stream_builder.dart';
+export 'widgets/computable_builder.dart';
 
 part 'computable_future.dart';
 part 'computable_stream.dart';

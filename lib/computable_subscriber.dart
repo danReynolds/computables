@@ -2,6 +2,7 @@ part of computables;
 
 class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
   final List<StreamSubscription> _subscriptions = [];
+
   ComputableSubscriber({
     T? initialValue,
     bool broadcast = false,
@@ -28,8 +29,15 @@ class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
     void Function(S data)? listener, {
     bool disposeOnDone = false,
   }) {
+    final initialValue = computable.get();
+
+    if (initialValue is S) {
+      listener?.call(initialValue);
+    }
+
     final subscription = computable
         .stream()
+        .skip(1)
         .where((value) => value is S)
         .cast<S>()
         .listen((value) {
@@ -63,7 +71,7 @@ class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
     });
   }
 
-  /// Subscribes the [Computable] to the provided source computable sstream and forwards the values it emits
+  /// Subscribes the [Computable] to the provided source computable stream and forwards the values it emits
   /// onto the [Computable].
   StreamSubscription<T> forward(
     Computable<T?> computable, {
