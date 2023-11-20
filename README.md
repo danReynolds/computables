@@ -80,8 +80,6 @@ Computable.compute2(
 
 ## Transformable
 
-Input computables can be transformed to output computables.
-
 ```dart
 final computable1 = Computable(1);
 final computable2 = Computable(2);
@@ -106,24 +104,6 @@ computable2.add(5);
 // Value: 0
 // Value: 0
 // Value: 0
-```
-
-## Forwardable
-
-It can be helpful to subscribe computables to other inputs like a [Future] or [Stream].
-
-```dart
-final computable = Computable.subscriber(initialValue: 0);
-final stream = Stream.fromIterable([1, 2, 3]);
-computable.forwardStream(stream);
-
-computable.stream().listen((value) {
-  print(value);
-  // 0
-  // 1
-  // 2
-  // 3
-})
 ```
 
 ## Enjoyable?
