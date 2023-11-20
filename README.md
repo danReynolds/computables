@@ -69,6 +69,7 @@ final computation = Computable.compute2(
 Computable.compute2(
   computation,
   Computable(1),
+  (input1, input2) => input1 + input2,
 ).stream().listen((value) {
   print(value);
   // 1
@@ -79,14 +80,14 @@ Computable.compute2(
 
 ## Transformable
 
-Computable inputs can be combined and transformed into an output computable:
+Input computables can be transformed to output computables.
 
 ```dart
-final computable = Computable(1);
+final computable1 = Computable(1);
 final computable2 = Computable(2);
 
-final computation = Computable.transform2(
-  computable,
+final outputComputable = Computable.transform2(
+  computable1,
   computable2,
   (input1, input2) {
     final fill = input2 - input1;
