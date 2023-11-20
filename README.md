@@ -51,20 +51,6 @@ computable.stream().listen((value) {
   // 1
   // 3
 });
-```
-
-```dart
-final computable = Computable.compute2(
-  Computable.fromStream(
-    Stream.value(1),
-    initialValue: 0,
-  ),
-  Computable.fromFuture(
-    Future.value(2),
-    initialValue: 0,
-  ),
-  (input1, input2) => input1 + input2,
-);
 
 Computable.compute2(
   computable,
