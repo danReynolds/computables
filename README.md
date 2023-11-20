@@ -19,6 +19,8 @@ Computable.fromIterable([1,2,3]).stream().listen((value) {
   // 3
 });
 
+```
+
 ## Readable
 
 ```dart
