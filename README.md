@@ -30,8 +30,6 @@ print(computable.get()) // 3
 
 ## Composable
 
-`Computables` can be composed together to 
-
 ```dart
 final computation = Computable.compute2(
   Computable.fromStream(
