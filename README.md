@@ -33,7 +33,7 @@ print(computable.get()) // 3
 ## Composable
 
 ```dart
-final computatble = Computable.compute2(
+final computable = Computable.compute2(
   Computable.fromStream(
     Stream.value(1),
     initialValue: 0,
