@@ -33,7 +33,7 @@ print(computable.get()) // 3
 ## Composable
 
 ```dart
-final computation = Computable.compute2(
+final computatble = Computable.compute2(
   Computable.fromStream(
     Stream.value(1),
     initialValue: 0,
@@ -45,7 +45,7 @@ final computation = Computable.compute2(
   (input1, input2) => input1 + input2,
 );
 
-computation.stream().listen((value) {
+computable.stream().listen((value) {
   print(value);
   // 0
   // 1
@@ -54,7 +54,7 @@ computation.stream().listen((value) {
 ```
 
 ```dart
-final computation = Computable.compute2(
+final computable = Computable.compute2(
   Computable.fromStream(
     Stream.value(1),
     initialValue: 0,
@@ -67,7 +67,7 @@ final computation = Computable.compute2(
 );
 
 Computable.compute2(
-  computation,
+  computable,
   Computable(1),
   (input1, input2) => input1 + input2,
 ).stream().listen((value) {
@@ -84,7 +84,7 @@ Computable.compute2(
 final computable1 = Computable(1);
 final computable2 = Computable(2);
 
-final outputComputable = Computable.transform2(
+final transformedComputable = Computable.transform2(
   computable1,
   computable2,
   (input1, input2) {
@@ -94,16 +94,16 @@ final outputComputable = Computable.transform2(
     );
   },
 ).stream().listen((value) {
-  print('Value: $value');
+  print('Next');
 });
-// Value: 0
+// Next
 
 computable2.add(5);
 
-// Value: 0
-// Value: 0
-// Value: 0
-// Value: 0
+// Next
+// Next
+// Next
+// Next
 ```
 
 ## Enjoyable?
