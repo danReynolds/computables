@@ -1,11 +1,11 @@
 part of 'computables.dart';
 
-class ComputableStream<T> with ComputableMixin<T> implements Computable<T> {
+class ComputableStream<T> extends Computable<T> {
   ComputableStream(
     Stream<T> stream, {
     required T initialValue,
     bool broadcast = false,
-  }) {
+  }) : super(initialValue, broadcast: broadcast) {
     StreamSubscription<T>? subscription;
 
     subscription = stream.listen(
@@ -15,7 +15,5 @@ class ComputableStream<T> with ComputableMixin<T> implements Computable<T> {
         dispose();
       },
     );
-
-    init(initialValue, broadcast: broadcast);
   }
 }
