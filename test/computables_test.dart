@@ -48,7 +48,7 @@ void main() {
     });
   });
 
-  group('Computable Future', () {
+  group('Computable future', () {
     test("Supports basic computation", () {
       final computable =
           Computable.fromFuture(Future.value(2), initialValue: 0);
@@ -56,13 +56,53 @@ void main() {
     });
   });
 
-  group('Computable Stream', () {
+  group('Computable stream', () {
     test("Supports basic computation", () {
       final computable = Computable.fromStream(
         Stream.fromIterable([2, 4, 6]),
         initialValue: 0,
       );
       expectLater(computable.stream(), emitsInOrder([0, 2, 4, 6]));
+    });
+  });
+
+  group('Computable subscriber', () {
+    test('Supports forwarding streams', () {
+      final computable = Computable.subscriber(initialValue: 0);
+      final stream = Stream.fromIterable([1, 2, 3]);
+
+      computable.forwardStream(stream);
+      expectLater(computable.stream(), emitsInOrder([0, 1, 2, 3]));
+    });
+
+    test('Supports subscribing to streams', () {
+      final computable = Computable.subscriber(initialValue: 0);
+      final stream = Stream.fromIterable([1, 2, 3]);
+
+      computable.subscribeStream(stream, (value) {
+        computable.add(value + 1);
+      });
+
+      expectLater(computable.stream(), emitsInOrder([0, 2, 3, 4]));
+    });
+
+    test('Supports forwarding futures', () {
+      final computable = Computable.subscriber(initialValue: 0);
+      final future = Future.value(2);
+
+      computable.forwardFuture(future);
+      expectLater(computable.stream(), emitsInOrder([0, 2]));
+    });
+
+    test('Supports subscribing to futures', () {
+      final computable = Computable.subscriber(initialValue: 0);
+      final future = Future.value(2);
+
+      computable.subscribeFuture(future, (value) {
+        computable.add(value + 1);
+      });
+
+      expectLater(computable.stream(), emitsInOrder([0, 3]));
     });
   });
 
@@ -109,45 +149,18 @@ void main() {
 
       expectLater(computation2.stream(), emitsInOrder([1, 2, 4]));
     });
-  });
 
-  group('Computable subscriber', () {
-    test('Supports forwarding streams', () {
-      final computable = Computable.subscriber(initialValue: 0);
-      final stream = Stream.fromIterable([1, 2, 3]);
+    test('Can invoke a mapping from the Computable instance', () {
+      final computation = Computable(1).map(
+        (value) {
+          return 2;
+        },
+      );
 
-      computable.forwardStream(stream);
-      expectLater(computable.stream(), emitsInOrder([0, 1, 2, 3]));
-    });
-
-    test('Supports subscribing to streams', () {
-      final computable = Computable.subscriber(initialValue: 0);
-      final stream = Stream.fromIterable([1, 2, 3]);
-
-      computable.subscribeStream(stream, (value) {
-        computable.add(value + 1);
-      });
-
-      expectLater(computable.stream(), emitsInOrder([0, 2, 3, 4]));
-    });
-
-    test('Supports forwarding futures', () {
-      final computable = Computable.subscriber(initialValue: 0);
-      final future = Future.value(2);
-
-      computable.forwardFuture(future);
-      expectLater(computable.stream(), emitsInOrder([0, 2]));
-    });
-
-    test('Supports subscribing to futures', () {
-      final computable = Computable.subscriber(initialValue: 0);
-      final future = Future.value(2);
-
-      computable.subscribeFuture(future, (value) {
-        computable.add(value + 1);
-      });
-
-      expectLater(computable.stream(), emitsInOrder([0, 3]));
+      expectLater(
+        computation.stream(),
+        emits(2),
+      );
     });
   });
 
@@ -188,6 +201,19 @@ void main() {
       computable2.add(5);
 
       expectLater(computation.stream(), emitsInOrder([3, 6]));
+    });
+
+    test('Can invoke a transformation from the Computable instance', () {
+      final computation = Computable(1).transform(
+        (value) {
+          return Computable(value + 1);
+        },
+      );
+
+      expectLater(
+        computation.stream(),
+        emits(2),
+      );
     });
   });
 

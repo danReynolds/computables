@@ -74,22 +74,31 @@ final transformedComputable = Computable.transform2(
   computable1,
   computable2,
   (input1, input2) {
-    final fill = input2 - input1;
-    return Computable.fromIterable(
-      List.filled(fill, 0)
-    );
+    return Computable(input2 - input1);
   },
 ).stream().listen((value) {
-  print('Next');
+  print(value);
+  // 1
+  // 0
+  // 3
 });
-// Next
 
+computable.add(2);
 computable2.add(5);
+```
 
-// Next
-// Next
-// Next
-// Next
+## Mappable
+
+```dart
+final computable = Computable(2);
+
+computable.map((value) => value + 1).stream().listen((value) {
+  print(value);
+  // 3
+  // 4
+});
+
+computable.add(3);
 ```
 
 ## Enjoyable?
