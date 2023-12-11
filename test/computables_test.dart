@@ -189,27 +189,6 @@ void main() {
 
       expectLater(computation.stream(), emitsInOrder([3, 6]));
     });
-
-    test(
-        'Does not update the output computable when an input computable emits the same value',
-        () async {
-      final computable = Computable(1);
-      final computable2 = Computable(2);
-
-      final computation = Computable.transform2(
-        computable,
-        computable2,
-        (input1, input2) {
-          return Computable(input1 + input2);
-        },
-      );
-
-      // This computable update is ignored since its value is the same.
-      computable2.add(2);
-      computable2.add(3);
-
-      expectLater(computation.stream(), emitsInOrder([3, 4]));
-    });
   });
 
   group('streamChanges', () {

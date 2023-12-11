@@ -5,7 +5,11 @@ class ComputableStream<T> extends Computable<T> {
     Stream<T> stream, {
     required T initialValue,
     bool broadcast = false,
-  }) : super(initialValue, broadcast: broadcast) {
+  })  : assert(
+          initialValue != null || T == Optional<T>,
+          'ComputableStream must specify a nullable type or an initial value.',
+        ),
+        super(initialValue, broadcast: broadcast) {
     StreamSubscription<T>? subscription;
 
     subscription = stream.listen(
