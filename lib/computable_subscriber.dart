@@ -6,6 +6,7 @@ class ComputableSubscriber<T> extends Computable<T> {
   ComputableSubscriber({
     T? initialValue,
     bool broadcast = false,
+    bool dedupe = false,
   })  : assert(
           initialValue != null || T == Optional<T>,
           'ComputableSubscriber must specify a nullable type or an initial value.',
@@ -13,6 +14,7 @@ class ComputableSubscriber<T> extends Computable<T> {
         super(
           initialValue as T,
           broadcast: broadcast,
+          dedupe: dedupe,
         );
 
   @override

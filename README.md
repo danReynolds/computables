@@ -68,23 +68,27 @@ Computable.compute2(
 
 ```dart
 final computable1 = Computable(1);
-final computable2 = Computable(2);
+final computable2 = Computable(5);
 
-final transformedComputable = Computable.transform2(
+Computable.transform2(
   computable1,
   computable2,
   (input1, input2) {
-    return Computable(input2 - input1);
+    return Computable.fromStream(
+      Stream.fromIterable(
+        List.generate(input2 - input1, (index) => index + 1),
+      ),
+      initialValue: 0,
+    );
   },
-).stream().listen((value) {
+).stream.listen((value) {
   print(value);
-  // 1
   // 0
+  // 1
+  // 2
   // 3
-});
-
-computable.add(2);
-computable2.add(5);
+  // 4
+})
 ```
 
 ## Mappable
@@ -99,6 +103,22 @@ computable.map((value) => value + 1).stream().listen((value) {
 });
 
 computable.add(3);
+```
+
+## Filterable
+
+```dart
+final computable = Computable.fromStream(
+  Stream.fromIterable([1, 2, 3, 4, 5]),
+  initialValue: 0,
+).where((prevValue, value) => prevValue + value < 5);
+
+computable.stream().listen((value) {
+  print(value);
+  // 0
+  // 1
+  // 2
+})
 ```
 
 ## Enjoyable?

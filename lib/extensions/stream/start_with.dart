@@ -6,8 +6,8 @@ StreamTransformer<T, T> startWithStreamTransformer<T>(T event) {
   });
 }
 
-extension StartWith on Stream {
-  Stream<T> startWith<T>(T event) {
+extension StartWith<T> on Stream<T> {
+  Stream<T> startWith(T event) {
     return transform(startWithStreamTransformer<T>(event));
   }
 }

@@ -13,6 +13,7 @@ class Computation<T> extends Computable<T> {
     required List<Computable> computables,
     required T Function(List inputs) compute,
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     final initialValues =
         computables.map((computable) => computable.get()).toList();
@@ -24,6 +25,7 @@ class Computation<T> extends Computable<T> {
       initialComputableValues: initialValues,
       initialValue: initialValue,
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -33,10 +35,12 @@ class Computation<T> extends Computable<T> {
     required this.compute,
     required List initialComputableValues,
     required bool broadcast,
+    required bool dedupe,
   })  : _computableValues = initialComputableValues,
         super(
           initialValue,
           broadcast: broadcast,
+          dedupe: dedupe,
         ) {
     for (int i = 0; i < computables.length; i++) {
       final computable = computables[i];

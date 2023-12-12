@@ -33,16 +33,38 @@ class Computable<T> {
 
   late T _value;
   late T _prevValue;
-  late final bool broadcast;
+
+  /// Whether the [Computable] can have more than one observable subscription. A single-subscription
+  /// observable will allow one listener and release its resources automatically when its listener cancels its subscription.
+  /// A broadcast observable must have its resources released manually by calling [dispose].
+  /// The term *broadcast* is used to refer to a a multi-subscription observable since it is common observable terminology and
+  /// the term broadcast is to mean something different in the library compared to its usage in the underlying Dart [Stream] implementation.
+  final bool broadcast;
+
+  /// Whether the [Computable] should deduplicate added values that are equal to the existing value.
+  /// Example:
+  /// ```dart
+  /// final computable = Computable(2);
+  ///
+  /// computable.stream().listen((value) {
+  ///   print(value);
+  ///   // 2
+  ///   // 3
+  /// });
+  ///
+  /// computable.add(2);
+  /// computable.add(2);
+  /// computable.add(2);
+  /// computable.add(3);
+  /// ```
+  /// In the example, the duplicate value `2` added to the Computable is dropped
+  /// and only changes are emitted.
+  final bool dedupe;
 
   Computable(
     T initialValue, {
-    /// Whether the [Computable] can have more than one observable subscription. A single-subscription
-    /// observable will allow one listener and release its resources automatically when its listener cancels its subscription.
-    /// A broadcast observable must have its resources released manually by calling [dispose].
-    /// The term *broadcast* is used to refer to a a multi-subscription observable since it is common observable terminology and
-    /// the term broadcast is to mean something different in the library compared to its usage in the underlying Dart [Stream] implementation.
     this.broadcast = false,
+    this.dedupe = false,
   }) {
     if (broadcast) {
       _controller = StreamController<ComputableChangeRecord<T>>.broadcast();
@@ -90,6 +112,7 @@ class Computable<T> {
     Future<S> future, {
     S? initialValue,
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     if ((S != Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type.';
@@ -99,6 +122,7 @@ class Computable<T> {
       future,
       initialValue: initialValue as S,
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -106,6 +130,7 @@ class Computable<T> {
     Stream<S> stream, {
     S? initialValue,
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     if ((S != Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type';
@@ -115,6 +140,7 @@ class Computable<T> {
       stream,
       initialValue: initialValue as S,
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -122,11 +148,13 @@ class Computable<T> {
     Computable<S1> computable1,
     T Function(S1 input1) compute, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return Computation<T>(
       computables: [computable1],
       compute: (inputs) => compute(inputs[0]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -135,11 +163,13 @@ class Computable<T> {
     Computable<S2> computable2,
     T Function(S1 input1, S2 input2) compute, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return Computation<T>(
       computables: [computable1, computable2],
       compute: (inputs) => compute(inputs[0], inputs[1]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -149,11 +179,13 @@ class Computable<T> {
     Computable<S3> computable3,
     T Function(S1 input1, S2 input2, S3 input3) compute, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return Computation<T>(
       computables: [computable1, computable2, computable3],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -169,11 +201,13 @@ class Computable<T> {
       S4 input4,
     ) compute, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return Computation<T>(
       computables: [computable1, computable2, computable3, computable4],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2], inputs[3]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -181,11 +215,13 @@ class Computable<T> {
     Computable<S1> computable1,
     Computable<T> Function(S1 input1) transform, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1],
       transform: (inputs) => transform(inputs[0]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -194,11 +230,13 @@ class Computable<T> {
     Computable<S2> computable2,
     Computable<T> Function(S1 input1, S2 input2) transform, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2],
       transform: (inputs) => transform(inputs[0], inputs[1]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -208,11 +246,13 @@ class Computable<T> {
     Computable<S3> computable3,
     Computable<T> Function(S1 input1, S2 input2, S3 input3) transform, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3],
       transform: (inputs) => transform(inputs[0], inputs[1], inputs[2]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -228,22 +268,26 @@ class Computable<T> {
       S4 input4,
     ) transform, {
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3, computable4],
       transform: (inputs) =>
           transform(inputs[0], inputs[1], inputs[2], inputs[3]),
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
   static ComputableSubscriber<T> subscriber<T>({
     T? initialValue,
     bool broadcast = false,
+    bool dedupe = false,
   }) {
     return ComputableSubscriber<T>(
       initialValue: initialValue,
       broadcast: broadcast,
+      dedupe: dedupe,
     );
   }
 
@@ -288,6 +332,10 @@ class Computable<T> {
       return _value;
     }
 
+    if (dedupe && _hasEmitted && _value == updatedValue) {
+      return _value;
+    }
+
     if (!_hasEmitted) {
       _hasEmitted = true;
     }
@@ -311,11 +359,29 @@ class Computable<T> {
     return _changeStream;
   }
 
-  Computable<S> map<S>(S Function(T value) map) {
-    return Computable.compute1(this, map);
+  Computable<S> map<S>(
+    S Function(T value) map, {
+    bool broadcast = false,
+    bool dedupe = false,
+  }) {
+    return Computable.compute1(
+      this,
+      map,
+      broadcast: broadcast,
+      dedupe: dedupe,
+    );
   }
 
-  Computable<S> transform<S>(Computable<S> Function(T value) transform) {
-    return Computable.transform1(this, transform);
+  Computable<S> transform<S>(
+    Computable<S> Function(T value) transform, {
+    bool broadcast = false,
+    bool dedupe = false,
+  }) {
+    return Computable.transform1(
+      this,
+      transform,
+      broadcast: broadcast,
+      dedupe: dedupe,
+    );
   }
 }
