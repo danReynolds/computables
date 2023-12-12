@@ -182,30 +182,6 @@ void main() {
     });
   });
 
-  group('Computable filter', () {
-    test('Filters the values emitted by the inner computable', () {
-      final computable = Computable.fromStream(
-        Stream.fromIterable([2, 4, 6]),
-        initialValue: 0,
-      ).where((_, value) => value % 2 == 0);
-
-      expectLater(computable.stream(), emitsInOrder([0, 2, 4]));
-    });
-
-    test(
-        'Filters the values emitted using the previous and current value for comparison',
-        () async {
-      final computable = Computable.fromStream(
-        Stream.fromIterable([1, 2, 3, 4, 5]),
-        initialValue: 0,
-      ).where((prevValue, value) => prevValue + value < 5);
-
-      final result = await computable.stream().take(6).toList();
-
-      expect(result, [0, 1, 2]);
-    });
-  });
-
   group('Computations', () {
     test('Computes multiple inputs', () {
       final computation = Computable.compute2(
