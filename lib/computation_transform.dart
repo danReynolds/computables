@@ -51,14 +51,13 @@ class ComputationTransform<T> extends Computable<T> {
       final computable = computables[i];
 
       _subscriptions.add(
-        /// Skip the current value emitted by each [Computable] since the first computation value
-        /// is pre-computed as one initial update.
-        computable.stream().skip(1).listen((inputValue) {
+        computable._syncStream().listen((inputValue) {
           _computableValues[i] = inputValue;
           _innerComputationSubscription?.cancel();
           _innerComputation = _transform(_computableValues);
           _innerComputationSubscription =
-              _innerComputation.stream().listen(add);
+              _innerComputation._syncStream().listen(add);
+          add(_innerComputation.get());
         }, onDone: () {
           _completedSubscriptionCount++;
           if (_completedSubscriptionCount == _subscriptions.length) {
@@ -68,27 +67,6 @@ class ComputationTransform<T> extends Computable<T> {
       );
     }
 
-    /// Skip the first event since it will be emitted by [init].
-    _innerComputationSubscription =
-        _innerComputation.stream().skip(1).listen(add);
-  }
-
-  @override
-  get() {
-    final values = computables.map((computable) => computable.get()).toList();
-    bool shouldUpdate = false;
-
-    for (int i = 0; i < computables.length; i++) {
-      if (_computableValues[i] != values[i]) {
-        shouldUpdate = true;
-        break;
-      }
-    }
-
-    if (shouldUpdate) {
-      return _transform(values).get();
-    }
-
-    return _value;
+    _innerComputationSubscription = _innerComputation._syncStream().listen(add);
   }
 }

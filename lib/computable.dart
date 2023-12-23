@@ -1,35 +1,21 @@
 part of 'computables.dart';
 
 typedef Optional<T> = T?;
-
 typedef ComputableChangeRecord<T> = (T prev, T next);
 
-class StreamFactory<T> extends Stream<T> {
-  final Stream<T> Function() factory;
-
-  StreamFactory(this.factory);
-
-  @override
-  StreamSubscription<T> listen(
-    void Function(T value)? onData, {
-    Function? onError,
-    void Function()? onDone,
-    bool? cancelOnError,
-  }) {
-    return factory().listen(
-      onData,
-      onError: onError,
-      onDone: onDone,
-      cancelOnError: cancelOnError,
-    );
-  }
-}
-
 class Computable<T> {
-  late final StreamController<ComputableChangeRecord<T>> _controller;
+  /// A synchronous stream controller is used for immediate notification of updates to internal
+  /// library subscribers including [Computation] and [ComputationTransform].
+  /// It is declared as a broadcast stream because it should never buffer events, which is the behavior
+  /// of a non-broadcast stream.
+  final StreamController<T> _syncController =
+      StreamController<T>.broadcast(sync: true);
+  late final StreamController<ComputableChangeRecord<T>> _asyncController;
+
   late StreamFactory<T> _valueStream;
   late StreamFactory<ComputableChangeRecord<T>> _changeStream;
   bool _hasEmitted = false;
+  bool _isClosed = false;
 
   late T _value;
   late T _prevValue;
@@ -67,9 +53,10 @@ class Computable<T> {
     this.dedupe = false,
   }) {
     if (broadcast) {
-      _controller = StreamController<ComputableChangeRecord<T>>.broadcast();
+      _asyncController =
+          StreamController<ComputableChangeRecord<T>>.broadcast();
     } else {
-      _controller =
+      _asyncController =
           StreamController<ComputableChangeRecord<T>>(onCancel: dispose);
     }
 
@@ -292,7 +279,7 @@ class Computable<T> {
   }
 
   Stream<T> _valueStreamFactory() {
-    final stream = _controller.stream.map((record) {
+    final stream = _asyncController.stream.map((record) {
       final (_, value) = record;
       return value;
     });
@@ -306,7 +293,7 @@ class Computable<T> {
   }
 
   Stream<ComputableChangeRecord<T>> _changeStreamFactory() {
-    final stream = _controller.stream.where((record) {
+    final stream = _asyncController.stream.where((record) {
       final (prevValue, value) = record;
       return prevValue != value;
     });
@@ -320,15 +307,17 @@ class Computable<T> {
   }
 
   void dispose() {
-    _controller.close();
+    _isClosed = true;
+    _asyncController.close();
+    _syncController.close();
   }
 
   bool get isClosed {
-    return _controller.isClosed;
+    return _isClosed;
   }
 
   T add(T updatedValue) {
-    if (_controller.isClosed) {
+    if (isClosed) {
       return _value;
     }
 
@@ -336,19 +325,25 @@ class Computable<T> {
       return _value;
     }
 
+    _prevValue = _value;
+    _value = updatedValue;
+
     if (!_hasEmitted) {
       _hasEmitted = true;
     }
 
-    _prevValue = _value;
-    _value = updatedValue;
+    _syncController.add(_value);
+    _asyncController.add((_prevValue, _value));
 
-    _controller.add((_prevValue, _value));
     return _value;
   }
 
   T get() {
     return _value;
+  }
+
+  Stream<T> _syncStream() {
+    return _syncController.stream;
   }
 
   Stream<T> stream() {

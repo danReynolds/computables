@@ -182,66 +182,88 @@ void main() {
     });
   });
 
-  group('Computations', () {
-    test('Computes multiple inputs', () {
-      final computation = Computable.compute2(
-        Computable.fromStream(
-          Stream.value(1),
-          initialValue: 0,
-        ),
-        Computable.fromFuture(
-          Future.value(2),
-          initialValue: 0,
-        ),
-        (input1, input2) => input1 + input2,
-      );
-
-      expect(computation.get(), 0);
-
-      expectLater(
-        computation.stream(),
-        emitsInOrder([0, 1, 3]),
-      );
-    });
-
-    test("Supports composability", () async {
-      final computable1 = Computable(1);
-      final computable2 = Computable(5);
-
-      final stream = Computable.transform2(
-        computable1,
-        computable2,
-        (input1, input2) {
-          return Computable.fromStream(
-            Stream.fromIterable(
-              List.generate(input2 - input1, (index) => index + 1),
-            ),
+  group(
+    'Computations',
+    () {
+      test('Computes multiple inputs', () {
+        final computation = Computable.compute2(
+          Computable.fromStream(
+            Stream.value(1),
             initialValue: 0,
-          );
-        },
-      ).stream();
+          ),
+          Computable.fromFuture(
+            Future.value(2),
+            initialValue: 0,
+          ),
+          (input1, input2) => input1 + input2,
+        );
 
-      expectLater(stream, emitsInOrder([0, 1, 2, 3, 4]));
-    });
+        expect(computation.get(), 0);
 
-    test("Auto-disposes when all inputs are disposed", () async {
-      final computable1 = Computable(1);
-      final computable2 = Computable(2);
+        expectLater(
+          computation.stream(),
+          emitsInOrder([0, 1, 3]),
+        );
+      });
 
-      final computation = Computable.compute2(
-        computable1,
-        computable2,
-        (input1, input2) => input1 + input2,
-      );
+      test("Supports composability", () async {
+        final computable1 = Computable(1);
+        final computable2 = Computable(5);
 
-      computable1.dispose();
-      await Future.delayed(const Duration(milliseconds: 1));
-      expect(computation.isClosed, false);
-      computable2.dispose();
-      await Future.delayed(const Duration(milliseconds: 1));
-      expect(computation.isClosed, true);
-    });
-  });
+        final stream = Computable.transform2(
+          computable1,
+          computable2,
+          (input1, input2) {
+            return Computable.fromStream(
+              Stream.fromIterable(
+                List.generate(input2 - input1, (index) => index + 1),
+              ),
+              initialValue: 0,
+            );
+          },
+        ).stream();
+
+        expectLater(stream, emitsInOrder([0, 1, 2, 3, 4]));
+      });
+
+      test("Auto-disposes when all inputs are disposed", () async {
+        final computable1 = Computable(1);
+        final computable2 = Computable(2);
+
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => input1 + input2,
+        );
+
+        computable1.dispose();
+        await Future.delayed(const Duration(milliseconds: 1));
+        expect(computation.isClosed, false);
+        computable2.dispose();
+        await Future.delayed(const Duration(milliseconds: 1));
+        expect(computation.isClosed, true);
+      });
+
+      test(
+          'Delivers recomputed values when synchronously accessed after an update',
+          () {
+        final computable1 = Computable(1);
+        final computable2 = Computable(2);
+
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => input1 + input2,
+        );
+
+        expect(computation.get(), 3);
+
+        computable1.add(2);
+
+        expect(computation.get(), 4);
+      });
+    },
+  );
 
   group("Computation transforms", () {
     test('Subscribes to the output computable', () {
@@ -280,6 +302,27 @@ void main() {
       computable2.add(5);
 
       expectLater(computation.stream(), emitsInOrder([3, 6]));
+    });
+
+    test(
+        'Delivers recomputed values when synchronously accessed after an update',
+        () {
+      final computable = Computable(1);
+      final computable2 = Computable(2);
+
+      final computation = Computable.transform2(
+        computable,
+        computable2,
+        (input1, input2) {
+          return Computable(input1 + input2);
+        },
+      );
+
+      expect(computation.get(), 3);
+
+      computable2.add(5);
+
+      expect(computation.get(), 6);
     });
   });
 }

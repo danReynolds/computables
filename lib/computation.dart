@@ -43,9 +43,7 @@ class Computation<T> extends Computable<T> {
       final computable = computables[i];
 
       _subscriptions.add(
-        /// Skip the current value emitted by each [Computable] since the first computation value
-        /// is pre-computed as one initial update by the call to [init].
-        computable.stream().skip(1).listen((inputValue) {
+        computable._syncStream().listen((inputValue) {
           _computableValues[i] = inputValue;
           add(compute(_computableValues));
         }, onDone: () {
@@ -57,24 +55,5 @@ class Computation<T> extends Computable<T> {
       );
       _computableValues[i] = computables[i].get();
     }
-  }
-
-  @override
-  get() {
-    final values = computables.map((computable) => computable.get()).toList();
-    bool shouldUpdate = false;
-
-    for (int i = 0; i < computables.length; i++) {
-      if (_computableValues[i] != values[i]) {
-        shouldUpdate = true;
-        break;
-      }
-    }
-
-    if (shouldUpdate) {
-      return compute(values);
-    }
-
-    return _value;
   }
 }
