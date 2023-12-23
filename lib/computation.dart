@@ -17,20 +17,17 @@ class Computation<T> extends Computable<T> {
   }) {
     final initialValues =
         computables.map((computable) => computable.get()).toList();
-    final initialValue = compute(initialValues);
 
     return Computation._(
       computables: computables,
       compute: compute,
       initialComputableValues: initialValues,
-      initialValue: initialValue,
       broadcast: broadcast,
       dedupe: dedupe,
     );
   }
 
   Computation._({
-    required initialValue,
     required this.computables,
     required this.compute,
     required List initialComputableValues,
@@ -38,7 +35,7 @@ class Computation<T> extends Computable<T> {
     required bool dedupe,
   })  : _computableValues = initialComputableValues,
         super(
-          initialValue,
+          compute(initialComputableValues),
           broadcast: broadcast,
           dedupe: dedupe,
         ) {

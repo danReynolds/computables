@@ -105,22 +105,6 @@ computable.map((value) => value + 1).stream().listen((value) {
 computable.add(3);
 ```
 
-## Filterable
-
-```dart
-final computable = Computable.fromStream(
-  Stream.fromIterable([1, 2, 3, 4, 5]),
-  initialValue: 0,
-).where((prevValue, value) => prevValue + value < 5);
-
-computable.stream().listen((value) {
-  print(value);
-  // 0
-  // 1
-  // 2
-})
-```
-
 ## Enjoyable?
 
 Reach out if there's any functionality you'd like added and happy coding!

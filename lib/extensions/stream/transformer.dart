@@ -10,10 +10,10 @@ StreamTransformer<S, T> createTransformer<S, T>({
 }) {
   return StreamTransformer<S, T>(
     (Stream input, bool cancelOnError) {
-      // A synchronous stream controller is intended for cases where
-      // an already asynchronous event triggers an event on a stream.
-      /// Instead of delivering the event to a listener on the next microtask,
-      /// it is delivered immediately.
+      /// A synchronous controller is only intended for optimizing event
+      /// propagation when one asynchronous event immediately triggers another.
+      /// Use synchronous controllers only to forward (potentially transformed)
+      /// events from another stream or a future.
       final controller = StreamController<T>(sync: true);
 
       controller.onListen = () {
