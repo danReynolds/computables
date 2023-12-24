@@ -1,24 +1,18 @@
 part of 'computables.dart';
 
 typedef Optional<T> = T?;
-typedef ComputableChangeRecord<T> = (T prev, T next);
 
 class Computable<T> {
   /// A synchronous stream controller is used for immediate notification of updates to internal
   /// library subscribers including [Computation] and [ComputationTransform].
-  /// It is declared as a broadcast stream because it should never buffer events, which is the behavior
-  /// of a non-broadcast stream.
-  final StreamController<T> _syncController =
-      StreamController<T>.broadcast(sync: true);
-  late final StreamController<ComputableChangeRecord<T>> _asyncController;
+  late final StreamController<T> _syncController;
+  late final StreamController<T> _asyncController;
 
+  late StreamFactory<T> _syncStream;
   late StreamFactory<T> _valueStream;
-  late StreamFactory<ComputableChangeRecord<T>> _changeStream;
-  bool _hasEmitted = false;
   bool _isClosed = false;
 
   late T _value;
-  late T _prevValue;
 
   /// Whether the [Computable] can have more than one observable subscription. A single-subscription
   /// observable will allow one listener and release its resources automatically when its listener cancels its subscription.
@@ -53,17 +47,17 @@ class Computable<T> {
     this.dedupe = false,
   }) {
     if (broadcast) {
-      _asyncController =
-          StreamController<ComputableChangeRecord<T>>.broadcast();
+      _syncController = StreamController<T>.broadcast(sync: true);
+      _asyncController = StreamController<T>.broadcast();
     } else {
-      _asyncController =
-          StreamController<ComputableChangeRecord<T>>(onCancel: dispose);
+      _syncController = StreamController<T>(sync: true, onCancel: dispose);
+      _asyncController = StreamController<T>(onCancel: dispose);
     }
 
+    _syncStream = StreamFactory(_syncStreamFactory);
     _valueStream = StreamFactory(_valueStreamFactory);
-    _changeStream = StreamFactory(_changeStreamFactory);
 
-    _prevValue = _value = initialValue;
+    _value = initialValue;
 
     /// Emit the initial value immediately on the controller if either it is non-null
     /// or the type of the [Computable] is optional.
@@ -77,22 +71,6 @@ class Computable<T> {
     bool broadcast = false,
   }) {
     return Computable<S>(initialValue, broadcast: broadcast);
-  }
-
-  static Computable<S> fromIterable<S>(
-    Iterable<S> iterable, {
-    bool broadcast = false,
-  }) {
-    if ((S != Optional<S>) && iterable.isEmpty) {
-      throw 'missing iterable value for non-nullable type.';
-    }
-
-    final computable = Computable(iterable.first, broadcast: broadcast);
-    for (final value in iterable.skip(1)) {
-      computable.add(value);
-    }
-
-    return computable;
   }
 
   static Computable<S> fromFuture<S>(
@@ -278,32 +256,16 @@ class Computable<T> {
     );
   }
 
+  Stream<T> _syncStreamFactory() {
+    return _syncController.stream;
+  }
+
   Stream<T> _valueStreamFactory() {
-    final stream = _asyncController.stream.map((record) {
-      final (_, value) = record;
+    final stream = _asyncController.stream.map((value) {
       return value;
     });
 
-    // Broadcast stream controllers do not buffer events emitted when there are no listeners,
-    // so when a listener subscribes to the controller's stream, we provide it with the current value.
-    if (_hasEmitted && broadcast) {
-      return stream.startWith(_value);
-    }
-    return stream;
-  }
-
-  Stream<ComputableChangeRecord<T>> _changeStreamFactory() {
-    final stream = _asyncController.stream.where((record) {
-      final (prevValue, value) = record;
-      return prevValue != value;
-    });
-
-    // Broadcast stream controllers do not buffer events emitted when there are no listeners,
-    // so when a listener subscribes to the controller's stream, we provide it with the current value.
-    if (_hasEmitted && broadcast && _prevValue != _value) {
-      return stream.startWith((_prevValue, _value));
-    }
-    return stream;
+    return stream.startWith(_value);
   }
 
   void dispose() {
@@ -321,19 +283,18 @@ class Computable<T> {
       return _value;
     }
 
-    if (dedupe && _hasEmitted && _value == updatedValue) {
+    if (dedupe && _value == updatedValue) {
       return _value;
     }
 
-    _prevValue = _value;
     _value = updatedValue;
 
-    if (!_hasEmitted) {
-      _hasEmitted = true;
+    if (_syncController.hasListener) {
+      _syncController.add(_value);
     }
-
-    _syncController.add(_value);
-    _asyncController.add((_prevValue, _value));
+    if (_asyncController.hasListener) {
+      _asyncController.add(_value);
+    }
 
     return _value;
   }
@@ -342,16 +303,8 @@ class Computable<T> {
     return _value;
   }
 
-  Stream<T> _syncStream() {
-    return _syncController.stream;
-  }
-
   Stream<T> stream() {
     return _valueStream;
-  }
-
-  Stream<ComputableChangeRecord<T>> streamChanges() {
-    return _changeStream;
   }
 
   Computable<S> map<S>(
