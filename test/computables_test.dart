@@ -122,7 +122,16 @@ void main() {
   });
 
   group('Computable subscriber', () {
-    test('Supports forwarding streams', () {
+    test("Forwards computables", () {
+      final computable = Computable.subscriber(initialValue: 0);
+
+      expectLater(computable.stream(), emitsInOrder([0, 3]));
+
+      computable.forward(Computable(3));
+      expect(computable.get(), 3);
+    });
+
+    test('Forwards streams', () {
       final computable = Computable.subscriber(initialValue: 0);
       final stream = Stream.fromIterable([1, 2, 3]);
 

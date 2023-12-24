@@ -39,8 +39,7 @@ class ComputableSubscriber<T> extends Computable<T> {
     }
 
     final subscription = computable
-        .stream()
-        .skip(1)
+        ._syncStream()
         .where((value) => value is S)
         .cast<S>()
         .listen((value) {

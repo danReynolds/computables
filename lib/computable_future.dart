@@ -19,9 +19,4 @@ class ComputableFuture<T> extends Computable<T> {
         ) {
     future.then(add);
   }
-
-  @override
-  get() {
-    return _value;
-  }
 }
