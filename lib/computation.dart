@@ -43,7 +43,7 @@ class Computation<T> extends Computable<T> {
       final computable = computables[i];
 
       _subscriptions.add(
-        computable._syncStream.listen((inputValue) {
+        computable._syncStream().listen((inputValue) {
           _computableValues[i] = inputValue;
           add(compute(_computableValues));
         }, onDone: () {

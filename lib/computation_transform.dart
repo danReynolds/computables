@@ -51,12 +51,12 @@ class ComputationTransform<T> extends Computable<T> {
       final computable = computables[i];
 
       _subscriptions.add(
-        computable._syncStream.listen((inputValue) {
+        computable._syncStream().listen((inputValue) {
           _computableValues[i] = inputValue;
           _innerComputationSubscription?.cancel();
           _innerComputation = _transform(_computableValues);
           _innerComputationSubscription =
-              _innerComputation._syncStream.listen(add);
+              _innerComputation._syncStream().listen(add);
           add(_innerComputation.get());
         }, onDone: () {
           _completedSubscriptionCount++;
@@ -67,7 +67,7 @@ class ComputationTransform<T> extends Computable<T> {
       );
     }
 
-    _innerComputationSubscription = _innerComputation._syncStream.listen(add);
+    _innerComputationSubscription = _innerComputation._syncStream().listen(add);
   }
 
   @override

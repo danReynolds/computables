@@ -1,5 +1,6 @@
 part of computables;
 
+/// Returns a new stream produced by calling [factory] whenever a listener subscribes to the [StreamFactory].
 class StreamFactory<T> extends Stream<T> {
   final Stream<T> Function() factory;
 

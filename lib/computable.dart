@@ -3,22 +3,42 @@ part of 'computables.dart';
 typedef Optional<T> = T?;
 
 class Computable<T> {
-  /// A synchronous stream controller is used for immediate notification of updates to internal
-  /// library subscribers including [Computation] and [ComputationTransform].
+  /// The synchronous stream controller is used for delivering updates to *internal*
+  /// subscribers like [Computation] and [ComputationTransform] so that they receive
+  /// updates immediately and always return the latest value through their [get] API.
+  /// Example:
+  /// ```dart
+  /// final computable1 = Computable(1);
+  /// final computable2 = Computable(2);
+
+  /// final computation = Computable.compute2(
+  ///   computable1,
+  ///   computable2,
+  ///   (input1, input2) => input1 + input2,
+  /// );
+  /// print(computation.get(), 3);
+  /// computable1.add(2);
+  /// print(computation.get(), 4);
+  /// ```
+  ///
+  /// If the asynchronous stream controller was used for both external and internal subscribers, then
+  /// the update to `computable1` wouldn't update the `computation` within the current task of the event loop, and
+  /// accessing the computation's latest value through the `get` API would be stale. Instead, we use a sync stream controller
+  /// so that internal subscribers like the computation immediately reflect the update.
   late final StreamController<T> _syncController;
+
+  /// The asynchronous stream controller is used for delivering updates to *external*
+  /// subscribers accessing the computable from the [stream] API.
   late final StreamController<T> _asyncController;
 
-  late StreamFactory<T> _syncStream;
   late StreamFactory<T> _valueStream;
   bool _isClosed = false;
 
   late T _value;
 
   /// Whether the [Computable] can have more than one observable subscription. A single-subscription
-  /// observable will allow one listener and release its resources automatically when its listener cancels its subscription.
-  /// A broadcast observable must have its resources released manually by calling [dispose].
-  /// The term *broadcast* is used to refer to a a multi-subscription observable since it is common observable terminology and
-  /// the term broadcast is to mean something different in the library compared to its usage in the underlying Dart [Stream] implementation.
+  /// observable will allow one subscriber and will release its resources automatically when its listener cancels its subscription.
+  /// A broadcast observable supports multiple subscribers and must have its resources released manually by calling [dispose].
   final bool broadcast;
 
   /// Whether the [Computable] should deduplicate added values that are equal to the existing value.
@@ -54,8 +74,13 @@ class Computable<T> {
       _asyncController = StreamController<T>(onCancel: dispose);
     }
 
-    _syncStream = StreamFactory(_syncStreamFactory);
-    _valueStream = StreamFactory(_valueStreamFactory);
+    _valueStream = StreamFactory(() {
+      final stream = _asyncController.stream.map((value) {
+        return value;
+      });
+
+      return stream.startWith(_value);
+    });
 
     _value = initialValue;
 
@@ -256,18 +281,6 @@ class Computable<T> {
     );
   }
 
-  Stream<T> _syncStreamFactory() {
-    return _syncController.stream;
-  }
-
-  Stream<T> _valueStreamFactory() {
-    final stream = _asyncController.stream.map((value) {
-      return value;
-    });
-
-    return stream.startWith(_value);
-  }
-
   void dispose() {
     _isClosed = true;
     _asyncController.close();
@@ -303,6 +316,12 @@ class Computable<T> {
     return _value;
   }
 
+  Stream<T> _syncStream() {
+    return _syncController.stream;
+  }
+
+  /// Returns of a [Stream] of values emitted by the [Computable]. The stream always begins with
+  /// the current value of the computable.
   Stream<T> stream() {
     return _valueStream;
   }

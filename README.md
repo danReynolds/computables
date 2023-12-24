@@ -7,18 +7,15 @@ Computables are composable, streamable values.
 ```dart
 import 'package:computables/computables.dart';
 
-Computable(2).stream().listen((value) {
-  print(value);
-  // 2
-});
+final computable = Computable(2);
 
-Computable.fromIterable([1,2,3]).stream().listen((value) {
+computable.stream().listen((value) {
   print(value);
-  // 1
   // 2
   // 3
 });
 
+computable.add(3);
 ```
 
 ## Readable
@@ -43,6 +40,7 @@ final computable = Computable.compute2(
     initialValue: 0,
   ),
   (input1, input2) => input1 + input2,
+  broadcast: true,
 );
 
 computable.stream().listen((value) {
@@ -76,7 +74,7 @@ Computable.transform2(
   (input1, input2) {
     return Computable.fromStream(
       Stream.fromIterable(
-        List.generate(input2 - input1, (index) => index + 1),
+        List.generate(input2 - input1, (diff) => diff + 1),
       ),
       initialValue: 0,
     );
