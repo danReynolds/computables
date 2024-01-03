@@ -1,7 +1,7 @@
 part of 'computables.dart';
 
 /// A [Computation] is used to derive data from the composition of multiple [Computable] inputs.
-class Computation<T> with ComputableMixin<T> implements Computable<T> {
+class Computation<T> extends Computable<T> {
   final List<Computable> computables;
   final T Function(List inputs) compute;
 
@@ -9,24 +9,43 @@ class Computation<T> with ComputableMixin<T> implements Computable<T> {
   late List _computableValues;
   int _completedSubscriptionCount = 0;
 
-  Computation({
+  factory Computation({
+    required List<Computable> computables,
+    required T Function(List inputs) compute,
+    bool broadcast = false,
+    bool dedupe = false,
+  }) {
+    final initialValues =
+        computables.map((computable) => computable.get()).toList();
+
+    return Computation._(
+      computables: computables,
+      compute: compute,
+      initialComputableValues: initialValues,
+      broadcast: broadcast,
+      dedupe: dedupe,
+    );
+  }
+
+  Computation._({
     required this.computables,
     required this.compute,
+    required List initialComputableValues,
     required bool broadcast,
-  }) {
-    _computableValues = List.filled(computables.length, null);
-
+    required bool dedupe,
+  })  : _computableValues = initialComputableValues,
+        super(
+          compute(initialComputableValues),
+          broadcast: broadcast,
+          dedupe: dedupe,
+        ) {
     for (int i = 0; i < computables.length; i++) {
       final computable = computables[i];
 
       _subscriptions.add(
-        /// Skip the current value emitted by each [Computable] since the first computation value
-        /// is pre-computed as one initial update by the call to [init].
-        computable.stream().skip(1).listen((inputValue) {
-          if (_computableValues[i] != inputValue) {
-            _computableValues[i] = inputValue;
-            add(compute(_computableValues));
-          }
+        computable._syncStream().listen((inputValue) {
+          _computableValues[i] = inputValue;
+          add(compute(_computableValues));
         }, onDone: () {
           _completedSubscriptionCount++;
           if (_completedSubscriptionCount == _subscriptions.length) {
@@ -36,12 +55,14 @@ class Computation<T> with ComputableMixin<T> implements Computable<T> {
       );
       _computableValues[i] = computables[i].get();
     }
-
-    init(compute(_computableValues), broadcast: broadcast);
   }
 
   @override
-  get() {
-    return compute(computables.map((computable) => computable.get()).toList());
+  dispose() {
+    super.dispose();
+
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
   }
 }

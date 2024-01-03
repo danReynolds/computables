@@ -7,18 +7,15 @@ Computables are composable, streamable values.
 ```dart
 import 'package:computables/computables.dart';
 
-Computable(2).stream().listen((value) {
-  print(value);
-  // 2
-});
+final computable = Computable(2);
 
-Computable.fromIterable([1,2,3]).stream().listen((value) {
+computable.stream().listen((value) {
   print(value);
-  // 1
   // 2
   // 3
 });
 
+computable.add(3);
 ```
 
 ## Readable
@@ -43,6 +40,7 @@ final computable = Computable.compute2(
     initialValue: 0,
   ),
   (input1, input2) => input1 + input2,
+  broadcast: true,
 );
 
 computable.stream().listen((value) {
@@ -68,28 +66,41 @@ Computable.compute2(
 
 ```dart
 final computable1 = Computable(1);
-final computable2 = Computable(2);
+final computable2 = Computable(5);
 
-final transformedComputable = Computable.transform2(
+Computable.transform2(
   computable1,
   computable2,
   (input1, input2) {
-    final fill = input2 - input1;
-    return Computable.fromIterable(
-      List.filled(fill, 0)
+    return Computable.fromStream(
+      Stream.fromIterable(
+        List.generate(input2 - input1, (diff) => diff + 1),
+      ),
+      initialValue: 0,
     );
   },
-).stream().listen((value) {
-  print('Next');
+).stream.listen((value) {
+  print(value);
+  // 0
+  // 1
+  // 2
+  // 3
+  // 4
+})
+```
+
+## Mappable
+
+```dart
+final computable = Computable(2);
+
+computable.map((value) => value + 1).stream().listen((value) {
+  print(value);
+  // 3
+  // 4
 });
-// Next
 
-computable2.add(5);
-
-// Next
-// Next
-// Next
-// Next
+computable.add(3);
 ```
 
 ## Enjoyable?

@@ -1,18 +1,21 @@
 part of computables;
 
-class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
+class ComputableSubscriber<T> extends Computable<T> {
   final List<StreamSubscription> _subscriptions = [];
 
   ComputableSubscriber({
     T? initialValue,
     bool broadcast = false,
-  }) {
-    if ((T != Optional<T>) && initialValue == null) {
-      throw 'missing [initialValue] for non-nullable type';
-    }
-
-    init(initialValue as T, broadcast: broadcast);
-  }
+    bool dedupe = false,
+  })  : assert(
+          initialValue != null || T == Optional<T>,
+          'ComputableSubscriber must specify a nullable type or an initial value.',
+        ),
+        super(
+          initialValue as T,
+          broadcast: broadcast,
+          dedupe: dedupe,
+        );
 
   @override
   dispose() {
@@ -36,8 +39,7 @@ class ComputableSubscriber<T> with ComputableMixin<T> implements Computable<T> {
     }
 
     final subscription = computable
-        .stream()
-        .skip(1)
+        ._syncStream()
         .where((value) => value is S)
         .cast<S>()
         .listen((value) {
