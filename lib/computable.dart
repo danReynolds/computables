@@ -83,12 +83,6 @@ class Computable<T> {
     });
 
     _value = initialValue;
-
-    /// Emit the initial value immediately on the controller if either it is non-null
-    /// or the type of the [Computable] is optional.
-    if (_value != null || T == Optional<T>) {
-      add(initialValue);
-    }
   }
 
   static Computable<S> fromValue<S>(
