@@ -1,34 +1,29 @@
 import 'package:computables/computables.dart';
 import 'package:flutter/material.dart';
 
-class ComputableBuilder<T> extends StatelessWidget {
-  final Computable<T> computable;
-  final Widget Function(BuildContext, T) builder;
+class ComputableZone<T> extends StatefulWidget {
+  final Widget Function(BuildContext) builder;
 
-  const ComputableBuilder({
+  const ComputableZone({
     super.key,
-    required this.computable,
     required this.builder,
   });
 
   @override
-  build(context) {
-    return StreamBuilder<T>(
-      initialData: computable.get(),
-      stream: computable.stream(),
-      builder: (context, snap) => builder(context, snap.data as T),
-    );
-  }
+  ComputableZoneState<T> createState() => ComputableZoneState<T>();
+}
 
-  static factory<T>({
-    required Computable<T> Function() factory,
-    required Widget Function(BuildContext, T) builder,
-    Key? key,
-  }) {
-    return ComputableFactoryBuilder<T>(
-      key: key,
-      factory: factory,
-      builder: builder,
+class ComputableZoneState<T> extends State<ComputableZone<T>> {
+  Computation<Widget>? _computation;
+
+  @override
+  build(context) {
+    _computation ??= Computation(() => widget.builder(context));
+
+    return StreamBuilder<Widget>(
+      initialData: _computation!.get(),
+      stream: _computation!.stream(),
+      builder: (context, childSnap) => childSnap.data!,
     );
   }
 }
@@ -69,6 +64,38 @@ class ComputableFactoryBuilderState<T>
     return ComputableBuilder<T>(
       computable: _computable,
       builder: widget.builder,
+    );
+  }
+}
+
+class ComputableBuilder<T> extends StatelessWidget {
+  final Computable<T> computable;
+  final Widget Function(BuildContext, T) builder;
+
+  const ComputableBuilder({
+    super.key,
+    required this.computable,
+    required this.builder,
+  });
+
+  @override
+  build(context) {
+    return StreamBuilder<T>(
+      initialData: computable.get(),
+      stream: computable.stream(),
+      builder: (context, snap) => builder(context, snap.data as T),
+    );
+  }
+
+  static factory<T>({
+    required Computable<T> Function() factory,
+    required Widget Function(BuildContext, T) builder,
+    Key? key,
+  }) {
+    return ComputableFactoryBuilder<T>(
+      key: key,
+      factory: factory,
+      builder: builder,
     );
   }
 }

@@ -1,67 +1,50 @@
 part of 'computables.dart';
 
-/// A [Computation] is used to derive data from the composition of multiple [Computable] inputs.
+Computation? _context;
+
 class Computation<T> extends Computable<T> {
-  final List<Computable> computables;
-  final T Function(List inputs) compute;
+  final T Function() _compute;
+  final Set<Computable> _dependencies = {};
+  final Map<Computable, StreamSubscription> _subscriptions = {};
 
-  final List<StreamSubscription> _subscriptions = [];
-  late List _computableValues;
-  int _completedSubscriptionCount = 0;
-
-  factory Computation({
-    required List<Computable> computables,
-    required T Function(List inputs) compute,
+  Computation(
+    this._compute, {
     bool broadcast = false,
-    bool dedupe = false,
-  }) {
-    final initialValues =
-        computables.map((computable) => computable.get()).toList();
-
-    return Computation._(
-      computables: computables,
-      compute: compute,
-      initialComputableValues: initialValues,
-      broadcast: broadcast,
-      dedupe: dedupe,
-    );
+  }) : super._(broadcast: broadcast) {
+    _recompute();
   }
 
-  Computation._({
-    required this.computables,
-    required this.compute,
-    required List initialComputableValues,
-    required bool broadcast,
-    required bool dedupe,
-  })  : _computableValues = initialComputableValues,
-        super(
-          compute(initialComputableValues),
-          broadcast: broadcast,
-          dedupe: dedupe,
-        ) {
-    for (int i = 0; i < computables.length; i++) {
-      final computable = computables[i];
+  void _subscribe(Computable computable) {
+    _dependencies.add(computable);
+    _subscriptions[computable] ??= computable._syncStream().listen((_) {
+      _recompute();
+    });
+  }
 
-      _subscriptions.add(
-        computable._syncStream().listen((inputValue) {
-          _computableValues[i] = inputValue;
-          add(compute(_computableValues));
-        }, onDone: () {
-          _completedSubscriptionCount++;
-          if (_completedSubscriptionCount == _subscriptions.length) {
-            dispose();
-          }
-        }),
-      );
-      _computableValues[i] = computables[i].get();
+  T _recompute() {
+    final prevDependencies = {..._dependencies};
+    _dependencies.clear();
+
+    _context = this;
+    final recomputedValue = _compute();
+    _context = null;
+
+    final staleDeps = prevDependencies.difference(_dependencies);
+
+    for (final dep in staleDeps) {
+      _subscriptions[dep]!.cancel();
+      _subscriptions.remove(dep);
     }
+
+    add(recomputedValue);
+    return recomputedValue;
   }
 
   @override
   dispose() {
     super.dispose();
 
-    for (final subscription in _subscriptions) {
+    for (final subscription in _subscriptions.values) {
       subscription.cancel();
     }
   }

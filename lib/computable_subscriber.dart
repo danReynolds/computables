@@ -6,7 +6,6 @@ class ComputableSubscriber<T> extends Computable<T> {
   ComputableSubscriber({
     T? initialValue,
     bool broadcast = false,
-    bool dedupe = false,
   })  : assert(
           initialValue != null || T == Optional<T>,
           'ComputableSubscriber must specify a nullable type or an initial value.',
@@ -14,7 +13,6 @@ class ComputableSubscriber<T> extends Computable<T> {
         super(
           initialValue as T,
           broadcast: broadcast,
-          dedupe: dedupe,
         );
 
   @override
@@ -51,7 +49,7 @@ class ComputableSubscriber<T> extends Computable<T> {
     return subscription;
   }
 
-  /// Subscribes the subscriber [Computable] to the provided source [Stream].
+  // /// Subscribes the subscriber [Computable] to the provided source [Stream].
   StreamSubscription<S> subscribeStream<S>(
     Stream<S> stream,
     void Function(S data)? listener, {
