@@ -306,6 +306,10 @@ class Computable<T> {
     return _value;
   }
 
+  T update(T Function(T value) updateFn) {
+    return add(updateFn(get()));
+  }
+
   T get() {
     return _value;
   }
