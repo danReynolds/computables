@@ -1,3 +1,7 @@
+## 2.0.0
+
+Refactor to use signals pattern internally and expose new dynamic computation APIs.
+
 ## 1.0.0
 
 Initial stable release.
