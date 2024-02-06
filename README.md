@@ -43,7 +43,7 @@ final computable1 = Computable.fromStream(
   initialValue: 0,
 );
 
-final computable2 = Computable.fromStream(
+final computable2 = Computable.fromFuture(
   Future.value(2),
   initialValue: 0,
 );
