@@ -13,8 +13,6 @@ void main() {
       expectLater(computable.stream(), emitsInOrder([2, 4, 6]));
 
       computable.add(4);
-      // Ignores duplicates
-      computable.add(4);
       computable.add(6);
     });
 
@@ -28,7 +26,7 @@ void main() {
 
       expectLater(
         computation.stream(),
-        emitsInOrder([2, 3]),
+        emitsInOrder([2, 3, 4]),
       );
 
       computable.add(2);
@@ -52,12 +50,25 @@ void main() {
       final computable = Computable(null);
       expectLater(computable.stream(), emitsInOrder([null]));
     });
+
+    test("Ignores duplicates", () {
+      final computable = Computable(1);
+
+      expectLater(
+        computable.stream(),
+        emitsInOrder([1, 2, 4]),
+      );
+
+      computable.add(2);
+      computable.add(2);
+      computable.add(3);
+    });
   });
 
   group(
     'Computations',
     () {
-      test('Computes multiple inputs', () {
+      test('Compute multiple inputs', () {
         final futureComputable = Computable.fromFuture(
           Future.value(1),
           initialValue: 0,
@@ -67,8 +78,9 @@ void main() {
           initialValue: 0,
         );
 
-        final computation =
-            Computation(() => futureComputable.get() + streamComputable.get());
+        final computation = Computation(
+          () => futureComputable.get() + streamComputable.get(),
+        );
 
         expect(computation.get(), 0);
         expectLater(
@@ -139,6 +151,37 @@ void main() {
         expect(computation.get(), 3);
         computable1.add(2);
         expect(computation.get(), 4);
+      });
+
+      test('Unsubscribes to stale dependencies', () async {
+        final computable1 = Computable(0);
+        final computable2 = Computable(10);
+
+        final computation = Computation(
+          () {
+            final value1 = computable1.get();
+
+            if (value1 >= 1) {
+              return value1;
+            }
+
+            return computable2.get();
+          },
+        );
+
+        final future = computation.stream().take(3).toList();
+
+        computable1.add(1);
+
+        // The subsequent update to computable2 is ignored since it was removed
+        // from the computation's dependencies
+        computable2.add(4);
+
+        computable1.add(2);
+
+        final result = await future;
+
+        expect(result, [10, 1, 2]);
       });
     },
   );

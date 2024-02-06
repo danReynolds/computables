@@ -1,33 +1,6 @@
 import 'package:computables/computables.dart';
 import 'package:flutter/material.dart';
 
-class ComputableZone<T> extends StatefulWidget {
-  final Widget Function(BuildContext) builder;
-
-  const ComputableZone({
-    super.key,
-    required this.builder,
-  });
-
-  @override
-  ComputableZoneState<T> createState() => ComputableZoneState<T>();
-}
-
-class ComputableZoneState<T> extends State<ComputableZone<T>> {
-  Computation<Widget>? _computation;
-
-  @override
-  build(context) {
-    _computation ??= Computation(() => widget.builder(context));
-
-    return StreamBuilder<Widget>(
-      initialData: _computation!.get(),
-      stream: _computation!.stream(),
-      builder: (context, childSnap) => childSnap.data!,
-    );
-  }
-}
-
 class ComputableFactoryBuilder<T> extends StatefulWidget {
   final Computable<T> Function() factory;
   final Widget Function(BuildContext, T) builder;

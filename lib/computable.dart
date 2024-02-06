@@ -32,6 +32,7 @@ class Computable<T> {
   late final StreamController<T> _asyncController;
 
   late StreamFactory<T> _valueStream;
+
   bool _isClosed = false;
   bool _isInitialized = false;
 
@@ -59,17 +60,15 @@ class Computable<T> {
     }
 
     _valueStream = StreamFactory(() {
-      final stream = _asyncController.stream.map((value) {
-        return value;
-      });
-
-      return stream.startWith(_value);
+      return _asyncController.stream.startWith(_value);
     });
 
     _isInitialized = true;
     _value = initialValue;
   }
 
+  /// Private constructor used by [Computation] and [ComputationTransform] to instantiate a [Computable]
+  /// without needing to provide an initial value.
   Computable._({
     this.broadcast = false,
   });
@@ -110,43 +109,31 @@ class Computable<T> {
     return add(updateFn(get()));
   }
 
-  /// Touches a computable, registering it as a dependency of the current computable context.
+  /// Touches a computable, registering it as a dependency of the current computable
+  /// context if one exists.
   void touch() {
     if (_context != null) {
       _context!._subscribe(this);
     }
   }
 
+  /// Returns the value of the computable. Registers it as a dependency of the current computable
+  /// context if one exists.
   T get() {
     touch();
     return _value;
   }
 
+  /// Private synchronous stream API used by [Computation] and [ComputationTransform] to immediately
+  /// recompute updates from dependencies.
   Stream<T> _syncStream() {
     return _syncController.stream;
   }
 
-  /// Returns of a [Stream] of values emitted by the [Computable]. The stream always begins with
+  /// Returns of a [Stream] of values emitted by the [Computable]. The stream begins with
   /// the current value of the computable.
   Stream<T> stream() {
     return _valueStream;
-  }
-
-  Computation<S> map<S>(
-    S Function(T value) map, {
-    bool broadcast = false,
-  }) {
-    return Computation(() => map(get()), broadcast: broadcast);
-  }
-
-  ComputationTransform<S> transform<S>(
-    Computable<S> Function(T value) transform, {
-    bool broadcast = false,
-  }) {
-    return ComputationTransform(
-      () => transform(get()),
-      broadcast: broadcast,
-    );
   }
 
   static Computable<S> fromFuture<S>(
@@ -176,101 +163,6 @@ class Computable<T> {
     return ComputableStream<S>(
       stream,
       initialValue: initialValue as S,
-    );
-  }
-
-  static Computation<T> compute2<T, S1, S2>(
-    Computable<S1> computable1,
-    Computable<S2> computable2,
-    T Function(S1 input1, S2 input2) compute, {
-    bool broadcast = false,
-  }) {
-    return Computation<T>(
-      () => compute(computable1.get(), computable2.get()),
-      broadcast: broadcast,
-    );
-  }
-
-  static Computation<T> compute3<T, S1, S2, S3>(
-    Computable<S1> computable1,
-    Computable<S2> computable2,
-    Computable<S3> computable3,
-    T Function(S1 input1, S2 input2, S3 input3) compute, {
-    bool broadcast = false,
-  }) {
-    return Computation<T>(
-      () => compute(computable1.get(), computable2.get(), computable3.get()),
-      broadcast: broadcast,
-    );
-  }
-
-  static Computation<T> compute4<T, S1, S2, S3, S4>(
-    Computable<S1> computable1,
-    Computable<S2> computable2,
-    Computable<S3> computable3,
-    Computable<S4> computable4,
-    T Function(S1 input1, S2 input2, S3 input3, S4 input4) compute, {
-    bool broadcast = false,
-  }) {
-    return Computation<T>(
-      () => compute(
-        computable1.get(),
-        computable2.get(),
-        computable3.get(),
-        computable4.get(),
-      ),
-      broadcast: broadcast,
-    );
-  }
-
-  static Computable<T> transform2<T, S1, S2>(
-    Computable<S1> computable1,
-    Computable<S2> computable2,
-    Computable<T> Function(S1 input1, S2 input2) transform, {
-    bool broadcast = false,
-    bool dedupe = false,
-  }) {
-    return ComputationTransform<T>(
-      () => transform(computable1.get(), computable2.get()),
-      broadcast: broadcast,
-    );
-  }
-
-  static Computable<T> transform3<T, S1, S2, S3>(
-    Computable<S1> computable1,
-    Computable<S2> computable2,
-    Computable<S3> computable3,
-    Computable<T> Function(S1 input1, S2 input2, S3 input3) transform, {
-    bool broadcast = false,
-    bool dedupe = false,
-  }) {
-    return ComputationTransform<T>(
-      () => transform(computable1.get(), computable2.get(), computable3.get()),
-      broadcast: broadcast,
-    );
-  }
-
-  static Computable<T> transform4<T, S1, S2, S3, S4>(
-    Computable<S1> computable1,
-    Computable<S2> computable2,
-    Computable<S3> computable3,
-    Computable<S4> computable4,
-    Computable<T> Function(
-      S1 input1,
-      S2 input2,
-      S3 input3,
-      S4 input4,
-    ) transform, {
-    bool broadcast = false,
-  }) {
-    return ComputationTransform<T>(
-      () => transform(
-        computable1.get(),
-        computable2.get(),
-        computable3.get(),
-        computable4.get(),
-      ),
-      broadcast: broadcast,
     );
   }
 }

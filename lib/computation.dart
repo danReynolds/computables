@@ -2,6 +2,9 @@ part of 'computables.dart';
 
 Computation? _context;
 
+/// A computation combines one or more computables into a new computable
+/// that emits the resolved values of the comptuation. It automatically recomputes
+/// whenever any of its dependencies are updated.
 class Computation<T> extends Computable<T> {
   final T Function() _compute;
   final Set<Computable> _dependencies = {};
@@ -37,6 +40,7 @@ class Computation<T> extends Computable<T> {
     }
 
     add(recomputedValue);
+
     return recomputedValue;
   }
 
@@ -47,5 +51,120 @@ class Computation<T> extends Computable<T> {
     for (final subscription in _subscriptions.values) {
       subscription.cancel();
     }
+  }
+
+  static Computation<T> compute<T>(
+    T Function() compute, {
+    bool broadcast = false,
+  }) {
+    return Computation<T>(
+      compute,
+      broadcast: broadcast,
+    );
+  }
+
+  static Computation<T> compute2<T, S1, S2>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    T Function(S1 input1, S2 input2) compute, {
+    bool broadcast = false,
+  }) {
+    return Computation<T>(
+      () => compute(computable1.get(), computable2.get()),
+      broadcast: broadcast,
+    );
+  }
+
+  static Computation<T> compute3<T, S1, S2, S3>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    T Function(S1 input1, S2 input2, S3 input3) compute, {
+    bool broadcast = false,
+  }) {
+    return Computation<T>(
+      () => compute(computable1.get(), computable2.get(), computable3.get()),
+      broadcast: broadcast,
+    );
+  }
+
+  static Computation<T> compute4<T, S1, S2, S3, S4>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<S4> computable4,
+    T Function(S1 input1, S2 input2, S3 input3, S4 input4) compute, {
+    bool broadcast = false,
+  }) {
+    return Computation<T>(
+      () => compute(
+        computable1.get(),
+        computable2.get(),
+        computable3.get(),
+        computable4.get(),
+      ),
+      broadcast: broadcast,
+    );
+  }
+
+  static ComputationTransform<T> transform<T>(
+    Computable<T> Function() transform, {
+    bool broadcast = false,
+  }) {
+    return ComputationTransform<T>(
+      transform,
+      broadcast: broadcast,
+    );
+  }
+
+  static Computable<T> transform2<T, S1, S2>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<T> Function(S1 input1, S2 input2) transform, {
+    bool broadcast = false,
+    bool dedupe = false,
+  }) {
+    return ComputationTransform<T>(
+      () => transform(computable1.get(), computable2.get()),
+      broadcast: broadcast,
+    );
+  }
+
+  static Computable<T> transform3<T, S1, S2, S3>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<T> Function(S1 input1, S2 input2, S3 input3) transform, {
+    bool broadcast = false,
+    bool dedupe = false,
+  }) {
+    return ComputationTransform<T>(
+      () => transform(computable1.get(), computable2.get(), computable3.get()),
+      broadcast: broadcast,
+    );
+  }
+
+  static Computable<T> transform4<T, S1, S2, S3, S4>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<S4> computable4,
+    Computable<T> Function(
+      S1 input1,
+      S2 input2,
+      S3 input3,
+      S4 input4,
+    ) transform, {
+    bool broadcast = false,
+  }) {
+    return ComputationTransform<T>(
+      () => transform(
+        computable1.get(),
+        computable2.get(),
+        computable3.get(),
+        computable4.get(),
+      ),
+      broadcast: broadcast,
+    );
   }
 }

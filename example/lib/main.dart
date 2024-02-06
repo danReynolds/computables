@@ -32,14 +32,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
   final _computable = Computable(0);
 
   void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-    // _computable.value++;
+    _computable.update((val) => val + 1);
   }
 
   @override
@@ -49,8 +45,9 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: ComputableZone(
-        builder: (context) {
+      body: ComputableBuilder(
+        computable: _computable,
+        builder: (context, value) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -59,7 +56,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   'You have pushed the button this many times:',
                 ),
                 Text(
-                  '$_counter',
+                  '$value',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
               ],
