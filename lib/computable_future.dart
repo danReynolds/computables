@@ -8,7 +8,7 @@ class ComputableFuture<T> extends Computable<T> {
     required T initialValue,
     bool broadcast = false,
   })  : assert(
-          initialValue != null || T == Optional<T>,
+          initialValue != null || T == _Optional<T>,
           'ComputableFuture must specify a nullable type or an initial value.',
         ),
         super(

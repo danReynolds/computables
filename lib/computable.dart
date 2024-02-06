@@ -1,6 +1,6 @@
 part of 'computables.dart';
 
-typedef Optional<T> = T?;
+typedef _Optional<T> = T?;
 
 class Computable<T> {
   /// The synchronous stream controller is used for delivering updates to *internal*
@@ -140,7 +140,7 @@ class Computable<T> {
     Future<S> future, {
     S? initialValue,
   }) {
-    if ((S != Optional<S>) && initialValue == null) {
+    if ((S != _Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type.';
     }
 
@@ -156,7 +156,7 @@ class Computable<T> {
     bool broadcast = false,
     bool dedupe = false,
   }) {
-    if ((S != Optional<S>) && initialValue == null) {
+    if ((S != _Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type';
     }
 

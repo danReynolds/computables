@@ -7,7 +7,7 @@ class ComputableStream<T> extends Computable<T> {
     Stream<T> stream, {
     required T initialValue,
   })  : assert(
-          initialValue != null || T == Optional<T>,
+          initialValue != null || T == _Optional<T>,
           'ComputableStream must specify a nullable type or an initial value.',
         ),
         super(initialValue) {
