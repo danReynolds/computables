@@ -56,7 +56,7 @@ void main() {
 
       expectLater(
         computable.stream(),
-        emitsInOrder([1, 2, 4]),
+        emitsInOrder([1, 2, 3]),
       );
 
       computable.add(2);
