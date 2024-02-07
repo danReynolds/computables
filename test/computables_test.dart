@@ -71,17 +71,16 @@ void main() {
     'Computations',
     () {
       test('Compute multiple inputs', () {
-        final futureComputable = Computable.fromFuture(
-          Future.value(1),
-          initialValue: 0,
-        );
-        final streamComputable = Computable.fromStream(
-          Stream.value(2),
-          initialValue: 0,
-        );
-
-        final computation = Computation(
-          () => futureComputable.get() + streamComputable.get(),
+        final computation = Computable.compute2(
+          Computable.fromFuture(
+            Future.value(1),
+            initialValue: 0,
+          ),
+          Computable.fromStream(
+            Stream.value(2),
+            initialValue: 0,
+          ),
+          (input1, input2) => input1 + input2,
         );
 
         expect(computation.get(), 0);
@@ -91,33 +90,13 @@ void main() {
         );
       });
 
-      test("Transforms multiple inputs", () async {
-        final computable1 = Computable(1);
-        final computable2 = Computable(5);
-
-        final stream = ComputationTransform(
-          () {
-            return Computable.fromStream(
-              Stream.fromIterable(
-                List.generate(
-                  computable2.get() - computable1.get(),
-                  (index) => index + 1,
-                ),
-              ),
-              initialValue: 0,
-            );
-          },
-        ).stream();
-
-        expectLater(stream, emitsInOrder([0, 1, 2, 3, 4]));
-      });
-
       test("Cancels non-broadcast computables automatically", () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
-
-        final computation = Computation(
-          () => computable1.get() + computable2.get(),
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => input1 + input2,
         );
 
         computation.dispose();
@@ -130,8 +109,10 @@ void main() {
         final computable1 = Computable(1, broadcast: true);
         final computable2 = Computable(2);
 
-        final computation = Computation(
-          () => computable1.get() + computable2.get(),
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => input1 + input2,
         );
 
         computation.dispose();
@@ -146,116 +127,29 @@ void main() {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
 
-        final computation = Computation(
-          () => computable1.get() + computable2.get(),
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => input1 + input2,
         );
 
         expect(computation.get(), 3);
         computable1.add(2);
         expect(computation.get(), 4);
       });
-
-      test('Unsubscribes to stale dependencies', () async {
-        final computable1 = Computable(0);
-        final computable2 = Computable(10);
-
-        final computation = Computation(
-          () {
-            final value1 = computable1.get();
-
-            if (value1 >= 1) {
-              return value1;
-            }
-
-            return computable2.get();
-          },
-        );
-
-        final future = computation.stream().take(3).toList();
-
-        computable1.add(1);
-
-        // The subsequent update to computable2 is ignored since it was removed
-        // from the computation's dependencies
-        computable2.add(4);
-
-        computable1.add(2);
-
-        final result = await future;
-
-        expect(result, [10, 1, 2]);
-      });
-
-      test('Detects and ignores cyclical dependencies', () {
-        String? cyclicalPrint;
-
-        runZoned(
-          () {
-            final computable1 = Computable(1, broadcast: true);
-            final computable2 = Computable(2, broadcast: true);
-
-            Computation<int>? computation1;
-            Computation<int>? computation2;
-
-            computation1 = Computation.compute(
-              () {
-                if (computable1.get() == 3) {
-                  return computation2!.get() + 1;
-                }
-                return computable1.get() + computable2.get();
-              },
-              broadcast: true,
-            );
-
-            computation2 = Computation.compute(
-              () {
-                if (computable1.get() == 3) {
-                  return computation1!.get() + 1;
-                }
-                return computable1.get() - computable2.get();
-              },
-              broadcast: true,
-            );
-
-            // When computable1 is updated, both computation1 and computation2 react to the change.
-            // computation1 recomputes first (since it listened to computable1 first), marking computation2 as a dependency and broadcasts to listeners (noone yet).
-            //
-            // computation2 then recomputes, marking computation1 as a dependency and broadcasts to listeners (computation1).
-            //
-            // computation1 starts to recompute in response to its dependency, computation2 rebroadcasting. However, the current computation
-            // context is marked as computation2, so computation1 observes that one if its dependencies, computation2 triggered its own recomputation
-            // and reports that a cycle occurred, canceling recalculation.
-            computable1.add(3);
-
-            computable1.dispose();
-            computable2.dispose();
-            computation1.dispose();
-            computation2.dispose();
-          },
-          zoneSpecification: ZoneSpecification(
-            // Intercept print calls
-            print: (_, __, ___, line) {
-              cyclicalPrint = line;
-            },
-          ),
-        );
-
-        expect(
-          cyclicalPrint,
-          "Cyclical dependency Instance of 'Computation<int>' detected during recomputation of: Instance of 'Computation<int>'",
-        );
-      });
     },
   );
 
-  group("Computation transforms", () {
+  group("Transforms", () {
     test('Emits values from the inner computable', () async {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
-      final computation = ComputationTransform(
-        () {
-          final value = computable2.get() - computable.get();
+      final computation = Computable.transform2(
+        computable,
+        computable2,
+        (input1, input2) {
+          final value = input2 - input1;
           return Computable.fromStream(
             Stream.fromIterable([value, value + 1, value + 2]),
             initialValue: 0,
@@ -280,9 +174,11 @@ void main() {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
-      final computation = ComputationTransform(
-        () {
-          final value = computable2.get() - computable.get();
+      final computation = Computable.transform2(
+        computable,
+        computable2,
+        (input1, input2) {
+          final value = input2 - input1;
           return Computable.fromStream(
             Stream.fromIterable([value, value + 1, value + 2]),
             initialValue: 0,
@@ -309,9 +205,11 @@ void main() {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
-      final computation = ComputationTransform(
-        () {
-          return Computable(computable.get() + computable2.get());
+      final computation = Computable.transform2(
+        computable,
+        computable2,
+        (input1, input2) {
+          return Computable(input1 + input2);
         },
       );
 
@@ -321,67 +219,47 @@ void main() {
 
       expect(computation.get(), 6);
     });
+  });
 
-    test('Detects and ignores cyclical dependencies', () {
-      String? cyclicalPrint;
+  group('Subscriber', () {
+    test('Forwards computable', () async {
+      final subscriber = Computable.subscriber(0);
 
-      runZoned(
-        () {
-          final computable1 = Computable(1, broadcast: true);
-          final computable2 = Computable(2, broadcast: true);
+      subscriber.forward(Computable(1));
 
-          ComputationTransform<int>? transform1;
-          ComputationTransform<int>? transform2;
+      expect(subscriber.get(), 1);
+    });
 
-          transform1 = Computation.transform(
-            () {
-              if (computable1.get() == 3) {
-                return Computable(transform2!.get() + 1);
-              }
-              return Computable(computable1.get() + computable2.get());
-            },
-            broadcast: true,
-          );
+    test('Subscribes to computable', () async {
+      int result = 0;
+      final subscriber = Computable.subscriber(0);
 
-          transform2 = Computation.transform(
-            () {
-              if (computable1.get() == 3) {
-                return Computable(transform1!.get() + 1);
-              }
-              return Computable(computable1.get() - computable2.get());
-            },
-            broadcast: true,
-          );
+      subscriber.subscribe(Computable(1), (val) {
+        result = val;
+      });
 
-          // When computable1 is updated, both transform1 and transform2's inner computations recompute and trigger resubscriptions to their updated
-          // inner computations.
-          //
-          // transform1's inner computation recomputes first (since it subscribed to computable1 first), marking transform2 as a dependency and then
-          // broadcasts to its only dependent, transform1. transform1 resubscribes to the new computable from its inner computation and broadcasts to dependents (currently noone).
-          //
-          // transform2's inner computation then recomputes, marking transform1 as a dependency and then broadcasts to its only dependent, transform2.
-          // transform2 resubscribes to the new computable from its inner computation and broadcasts to its dependents, which includes transform1's inner computable.
-          //
-          // transform1's inner computable goes to recompute, however transform2 marked itself as the current computable context in its resubscription ahead of broadcasting to its dependents
-          // so transform1's inner computable observes that one of its dependents, transform2, has triggered its recomputation and reports a cyclical dependency, aborting recomputation.
-          computable1.add(3);
+      expect(result, 1);
+    });
 
-          computable1.dispose();
-          computable2.dispose();
-          transform1.dispose();
-          transform2.dispose();
-        },
-        zoneSpecification: ZoneSpecification(
-          // Intercept print calls
-          print: (_, __, ___, line) {
-            cyclicalPrint = line;
-          },
-        ),
+    test('Forwards stream', () {
+      final subscriber = Computable.subscriber(0);
+
+      subscriber.forwardStream(Stream.value(1));
+
+      expectLater(
+        subscriber.stream(),
+        emitsInOrder([0, 1]),
       );
+    });
 
-      expect(
-        cyclicalPrint,
-        "Cyclical dependency Instance of 'ComputationTransform<int>' detected during recomputation of: Instance of 'Computation<Computable<int>>'",
+    test('Forwards future', () {
+      final subscriber = Computable.subscriber(0);
+
+      subscriber.forwardFuture(Future.value(1));
+
+      expectLater(
+        subscriber.stream(),
+        emitsInOrder([0, 1]),
       );
     });
   });

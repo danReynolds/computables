@@ -1,3 +1,7 @@
+## 3.0.0
+
+Migrate off signals implementation.
+
 ## 2.1.0
 
 * Add automatic dependency cycle detection.

@@ -38,59 +38,6 @@ A computation is a type of computable that composes multiple input computables i
 any other computable value, including futures, streams and other computations.
 
 ```dart
-final computable1 = Computable.fromStream(
-  Stream.value(1),
-  initialValue: 0,
-);
-
-final computable2 = Computable.fromFuture(
-  Future.value(2),
-  initialValue: 0,
-);
-
-final computation = Computation.compute(() => computable1.get() + computable2.get());
-
-computation.stream().listen((value) {
-  print(value);
-  // 0
-  // 1
-  // 2
-})
-```
-
-A computation automatically subscribes to all of the computables accessed in its computation and recalculates its value whenever any of them change.
-
-If a computable stops being accessed in a computation, then it is unsubscribed from that computation, as shown below:
-
-```dart
-final computable1 = Computable(1);
-final computable2 = Computable(2);
-
-final computation = Computation.compute(() {
-  final value1 = computable.get();
-
-  if (value1 > 0) {
-    return computable2.get();
-  }
-
-  return value1;
-});
-
-computation.stream().listen((value) {
-  print(value);
-  // 2
-  // 0
-});
-
-// The recomputation triggered by updating the value of `computable1` to 0 causes `computable2` to no longer be referenced
-// in the computation. As a result, the computation does not recompute when `computable2` is subsequently updated.
-computable1.add(0);
-computable2.add(3);
-```
-
-As a convenience, computations can also be expressed with a static list of inputs that automatically unwrap their values:
-
-```dart
 final computation = Computation.compute2(
   Computable.fromStream(Stream.value(1), initialValue: 0),
   Computable.fromFuture(Future.value(2), initialValue: 0),
@@ -105,7 +52,7 @@ computable.stream().listen((value) {
 });
 ```
 
-As mentioned previously, a computation is just another type of computable that can itself be immediately reused in other computations:
+Since a computation is just another type of computable, it can be immediately reused in other computations:
 
 ```dart
 final computation = Computation.compute2(
@@ -158,7 +105,27 @@ Computation.transform2(
 ```
 
 The above transformation takes two computable values as inputs and returns a computable stream of values
-that begins with 0 and asynchronously emits the sequence 1, 2, 3, 4. 
+that begins with 0 and asynchronously emits the sequence 1, 2, 3, 4.
+
+## Subscribers
+
+A `ComputableSubscriber` allows a computable to subscribe to changes from other sources like futures, streams, and other computables.
+
+```dart
+final subscriber = Computable.subscriber(0);
+
+subscriber.forward(Computable.fromStream(Stream.fromIterable([1, 2, 3])));
+subscriber.forwardFuture(Future.delayed(Duration(seconds: 1), () => 4));
+
+subscriber.stream().listen((value) {
+  print(value);
+  // 0
+  // 1
+  // 2
+  // 3
+  // 4
+})
+```
 
 ## Extensions
 
@@ -166,20 +133,7 @@ There are some helpful utility extensions that make working with computables eas
 
 ### Map
 
-The map extension lets you rewrite a single input computation like this:
-
-```dart
-final computable = Computable(2);
-Computation.compute(() => computable.get() + 1).stream().listen((value) {
-  print(value);
-  // 3
-  // 4
-});
-
-computable.add(3);
-```
-
-as a direct mapping from the input computable:
+Map a source computable to a new computable:
 
 ```dart
 final computable = Computable(2);
@@ -194,7 +148,7 @@ computable.add(3);
 
 ### Transform
 
-Single input transforms can also be written with an extension:
+Transform a source computable to a new computable:
 
 ```dart
 final computable = Computable(2);
