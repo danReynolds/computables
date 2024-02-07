@@ -1,3 +1,7 @@
+## 2.1.0
+
+* Add automatic dependency cycle detection.
+
 ## 2.0.0
 
 Refactor to use signals pattern internally and expose new dynamic computation APIs.
