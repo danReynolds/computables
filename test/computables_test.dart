@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:computables/computables.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -182,6 +184,61 @@ void main() {
         final result = await future;
 
         expect(result, [10, 1, 2]);
+      });
+
+      test('Detects and ignores cyclical dependencies', () {
+        String? cyclicalPrint;
+
+        runZoned(
+          () {
+            final computable1 = Computable(1, broadcast: true);
+            final computable2 = Computable(2, broadcast: true);
+
+            Computation<int>? computation1;
+            Computation<int>? computation2;
+
+            computation1 = Computation.compute(
+              () {
+                if (computable1.get() == 3) {
+                  return computation2!.get() + 1;
+                }
+                return computable1.get() + computable2.get();
+              },
+              broadcast: true,
+            );
+
+            computation2 = Computation.compute(
+              () {
+                if (computable1.get() == 3) {
+                  return computation1!.get() + 1;
+                }
+                return computable1.get() - computable2.get();
+              },
+              broadcast: true,
+            );
+
+            // When computable1 is updated, both computation1 and computation2 react to the change.
+            // computation1 recomputes first (since it listened to computable1 first), marking computation2 as a dependency and broadcasts to listeners (noone yet).
+            //
+            // computation2 then recomputes, marking computation1 as a dependency and broadcasts to listeners (computation1).
+            //
+            // computation1 starts to recompute in response to its dependency, computation2 rebroadcasting. However, the current computation
+            // context is still marked as computation2, so computation1 observes that one if its dependencies, computation2 triggered its own recomputation
+            // and reports that a cycle occurred, canceling recalculation.
+            computable1.add(3);
+          },
+          zoneSpecification: ZoneSpecification(
+            // Intercept print calls
+            print: (_, __, ___, line) {
+              cyclicalPrint = line;
+            },
+          ),
+        );
+
+        expect(
+          cyclicalPrint,
+          "Cyclical dependency Instance of 'Computation<int>' detected during recomputation of: Instance of 'Computation<int>'",
+        );
       });
     },
   );

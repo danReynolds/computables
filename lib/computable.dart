@@ -117,6 +117,10 @@ class Computable<T> {
     }
   }
 
+  T peek() {
+    return _value;
+  }
+
   /// Returns the value of the computable. Registers it as a dependency of the current computable
   /// context if one exists.
   T get() {
