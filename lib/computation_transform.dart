@@ -21,8 +21,9 @@ class ComputationTransform<T> extends Computable<T> {
 
   void _resubscribe() {
     _innerSubscription?.cancel();
-    _innerSubscription = _computation.get()._syncStream().listen(add);
-    add(_computation.get().get());
+    final innerComputation = _computation.peek();
+    _innerSubscription = innerComputation._syncStream().listen(add);
+    add(innerComputation.peek());
   }
 
   @override

@@ -25,12 +25,20 @@ class Computation<T> extends Computable<T> {
   }
 
   T _recompute() {
+    // If a computation is being recomputed in the context of one of its own dependencies, then this is a cyclical
+    // dependency and the recomputation should be logged and aborted.
+    if (_context != null && _dependencies.contains(_context)) {
+      printDebug(
+        'Cyclical dependency $_context detected during recomputation of: $this',
+      );
+      return _value;
+    }
+
     final prevDependencies = {..._dependencies};
     _dependencies.clear();
 
     _context = this;
     final recomputedValue = _compute();
-    _context = null;
 
     final staleDeps = prevDependencies.difference(_dependencies);
 
@@ -40,6 +48,8 @@ class Computation<T> extends Computable<T> {
     }
 
     add(recomputedValue);
+
+    _context = null;
 
     return recomputedValue;
   }

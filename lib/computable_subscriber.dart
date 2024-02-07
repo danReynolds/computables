@@ -7,7 +7,7 @@ class ComputableSubscriber<T> extends Computable<T> {
     T? initialValue,
     bool broadcast = false,
   })  : assert(
-          initialValue != null || T == Optional<T>,
+          initialValue != null || T == _Optional<T>,
           'ComputableSubscriber must specify a nullable type or an initial value.',
         ),
         super(
