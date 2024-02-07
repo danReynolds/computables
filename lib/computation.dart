@@ -1,7 +1,5 @@
 part of 'computables.dart';
 
-Computation? _context;
-
 /// A computation combines one or more computables into a new computable
 /// that emits the resolved values of the comptuation. It automatically recomputes
 /// whenever any of its dependencies are updated.
@@ -24,14 +22,14 @@ class Computation<T> extends Computable<T> {
     });
   }
 
-  T _recompute() {
+  void _recompute() {
     // If a computation is being recomputed in the context of one of its own dependencies, then this is a cyclical
     // dependency and the recomputation should be logged and aborted.
     if (_context != null && _dependencies.contains(_context)) {
       printDebug(
         'Cyclical dependency $_context detected during recomputation of: $this',
       );
-      return _value;
+      return;
     }
 
     final prevDependencies = {..._dependencies};
@@ -49,9 +47,9 @@ class Computation<T> extends Computable<T> {
 
     add(recomputedValue);
 
+    // The context is only cleared *after* synchronously informing dependents in `add()` so that they
+    // can check whether this computation is also dependent on them and detect cycles.
     _context = null;
-
-    return recomputedValue;
   }
 
   @override

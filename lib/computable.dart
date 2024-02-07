@@ -2,6 +2,9 @@ part of 'computables.dart';
 
 typedef _Optional<T> = T?;
 
+/// The global context that is set to the computable that is currently recomputing.
+Computable? _context;
+
 class Computable<T> {
   /// The synchronous stream controller is used for delivering updates to *internal*
   /// subscribers like [Computation] and [ComputationTransform] so that they receive
@@ -109,22 +112,14 @@ class Computable<T> {
     return add(updateFn(get()));
   }
 
-  /// Touches a computable, registering it as a dependency of the current computable
-  /// context if one exists.
-  void touch() {
-    if (_context != null) {
-      _context!._subscribe(this);
-    }
-  }
-
-  T peek() {
-    return _value;
-  }
-
-  /// Returns the value of the computable. Registers it as a dependency of the current computable
-  /// context if one exists.
+  /// Returns the value of the computable.
   T get() {
-    touch();
+    final context = _context;
+    // If this computable is accessed as part of a computation, then it should mark itself as a dependency
+    // of that computation.
+    if (context is Computation) {
+      context._subscribe(this);
+    }
     return _value;
   }
 

@@ -20,10 +20,17 @@ class ComputationTransform<T> extends Computable<T> {
   }
 
   void _resubscribe() {
+    // The computation transform marks itself as the current computable context ahead of
+    // informing dependents of its new value so that they are able to detect a cyclical dependency to this computable.
+    _context = this;
+
     _innerSubscription?.cancel();
-    final innerComputation = _computation.peek();
+    final innerComputation = _computation.get();
     _innerSubscription = innerComputation._syncStream().listen(add);
-    add(innerComputation.peek());
+
+    add(innerComputation.get());
+
+    _context = null;
   }
 
   @override
