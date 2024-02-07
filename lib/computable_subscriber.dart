@@ -1,14 +1,16 @@
 part of computables;
 
-class ComputableSubscriber<T> extends Computable<T> {
+// Rethink subscribers. If someone forwards them and accesses themselves within the forward it creates a cycle.
+
+class ComputationSubscriber<T> extends Computable<T> {
   final List<StreamSubscription> _subscriptions = [];
 
-  ComputableSubscriber({
+  ComputationSubscriber({
     T? initialValue,
     bool broadcast = false,
   })  : assert(
           initialValue != null || T == _Optional<T>,
-          'ComputableSubscriber must specify a nullable type or an initial value.',
+          'ComputationSubscriber must specify a nullable type or an initial value.',
         ),
         super(
           initialValue as T,
@@ -23,6 +25,8 @@ class ComputableSubscriber<T> extends Computable<T> {
       subscription.cancel();
     }
   }
+
+  void _onSubscribe() {}
 
   /// Subscribes the subscriber [Computable] to the provided source [Computable].
   StreamSubscription<S> subscribe<S>(

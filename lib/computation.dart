@@ -1,7 +1,7 @@
 part of 'computables.dart';
 
 /// A computation combines one or more computables into a new computable
-/// that emits the resolved values of the comptuation. It automatically recomputes
+/// that emits the resolved values of the computation. It automatically recomputes
 /// whenever any of its dependencies are updated.
 class Computation<T> extends Computable<T> {
   final T Function() _compute;

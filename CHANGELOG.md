@@ -1,3 +1,7 @@
+## 2.1.1
+
+* Add cyclical dependency detection in transforms.
+
 ## 2.1.0
 
 * Add automatic dependency cycle detection.
