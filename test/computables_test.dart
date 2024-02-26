@@ -53,12 +53,25 @@ void main() {
       expectLater(computable.stream(), emitsInOrder([null]));
     });
 
-    test("Ignores duplicates", () {
+    test("Ignores duplicates by default", () {
       final computable = Computable(1);
 
       expectLater(
         computable.stream(),
         emitsInOrder([1, 2, 3]),
+      );
+
+      computable.add(2);
+      computable.add(2);
+      computable.add(3);
+    });
+
+    test("Re-emits duplicates when specified", () {
+      final computable = Computable(1, dedupe: false);
+
+      expectLater(
+        computable.stream(),
+        emitsInOrder([1, 2, 2, 3]),
       );
 
       computable.add(2);

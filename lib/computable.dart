@@ -43,9 +43,13 @@ class Computable<T> {
   /// A broadcast observable supports multiple subscribers and must have its resources released manually by calling [dispose].
   final bool broadcast;
 
+  /// Whether duplicate values should be discarded and not re-emitted to subscribers.
+  final bool dedupe;
+
   Computable(
     T initialValue, {
     this.broadcast = false,
+    this.dedupe = true,
   }) {
     _init(initialValue);
   }
@@ -71,6 +75,7 @@ class Computable<T> {
   /// without needing to provide an initial value.
   Computable._({
     this.broadcast = false,
+    this.dedupe = true,
   });
 
   void dispose() {
@@ -89,7 +94,7 @@ class Computable<T> {
       return _value;
     }
 
-    if (isClosed || _value == updatedValue) {
+    if (isClosed || _value == updatedValue && dedupe) {
       return _value;
     }
 
