@@ -27,12 +27,6 @@ class ComputableFactoryBuilderState<T>
   }
 
   @override
-  dispose() {
-    super.dispose();
-    _computable.dispose();
-  }
-
-  @override
   build(context) {
     return ComputableBuilder<T>(
       computable: _computable,
