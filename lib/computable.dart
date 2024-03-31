@@ -197,11 +197,11 @@ class Computable<T> {
     );
   }
 
-  static Computation<T> compute4<T, S1, S2, S3, S4>(
+  static Computable<T> compute4<T, S1, S2, S3, S4>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,
-    Computable<S3> computable4,
+    Computable<S4> computable4,
     T Function(
       S1 input1,
       S2 input2,

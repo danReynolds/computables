@@ -1,9 +1,11 @@
 part of computables;
 
 StreamTransformer<T, T> startWithStreamTransformer<T>(T event) {
-  return createTransformer<T, T>(onListen: (controller) {
-    controller.add(event);
-  });
+  return createTransformer<T, T>(
+    onListen: (controller) {
+      controller.add(event);
+    },
+  );
 }
 
 extension StartWith<T> on Stream<T> {
