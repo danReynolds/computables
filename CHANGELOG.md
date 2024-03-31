@@ -1,6 +1,10 @@
+## 3.0.1
+
+* Fix bug with computable builder factory disposing computables unnecessarily.
+
 ## 3.0.0
 
-Migrate off signals implementation.
+* Migrate off signals implementation.
 
 ## 2.1.0
 
@@ -8,11 +12,11 @@ Migrate off signals implementation.
 
 ## 2.0.0
 
-Refactor to use signals pattern internally and expose new dynamic computation APIs.
+* Refactor to use signals pattern internally and expose new dynamic computation APIs.
 
 ## 1.0.0
 
-Initial stable release.
+* Initial stable release.
 
 ## 0.0.4
 
