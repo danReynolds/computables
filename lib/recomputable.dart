@@ -4,8 +4,7 @@ part of computables;
 mixin Recomputable<T> on Computable<T> {
   late final List<Computable> computables;
 
-  /// If a dirty computable is accessed ahead of its scheduled broadcast, then it must recompute immediately
-  /// and cache the updated value so that when its scheduled broadcast runs, it doesn't need to recompute again.
+  /// A cached value of the recomputed value pending broadcast.
   T? _pendingValue;
 
   bool _isDirty = false;
@@ -40,6 +39,9 @@ mixin Recomputable<T> on Computable<T> {
   get() {
     if (isDirty) {
       isDirty = false;
+
+      /// If a computable marked as dirty is accessed ahead of its scheduled broadcast, then it must recompute immediately
+      /// and cache the updated value so that when its scheduled broadcast runs, it doesn't need to recompute again.
       return _pendingValue = _recompute();
     }
 
