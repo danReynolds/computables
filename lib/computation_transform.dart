@@ -23,8 +23,10 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
     final innerComputable = _computation.get();
 
     /// A computation transform could have been marked as dirty either because its inner computable
-    /// has a new value or its computation has a new value. If its computation's calculated computable has not changed,
-    /// then it is dirty because its inner computable has a new value.
+    /// has a new value or its computation has a new inner computable. If the inner computable has changed,
+    /// then it removes its dependency on the previous computable and switches to the new one.
+    ///
+    /// In either scenario, it then returns the inner computable's latest value.
     if (identical(innerComputable, _innerComputable)) {
       return innerComputable.get();
     }
