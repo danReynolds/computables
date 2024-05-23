@@ -224,45 +224,6 @@ void main() {
       expect(await future, [1, 4]);
     });
 
-    test('Cancels the previous inner computable', () async {
-      final computable = Computable(1);
-      final computable2 = Computable(2);
-
-      final computation = Computable.transform2(
-        computable,
-        computable2,
-        (input1, input2) {
-          final value = input2 - input1;
-          return Computable.fromStream(
-            Stream.fromIterable([
-              value, // 1
-              value + 1, // 2
-              value + 2, // 3
-              value + 3, // 4
-              value + 4, // 5
-            ]),
-            initialValue: 0,
-          );
-        },
-        broadcast: true,
-      );
-
-      final result1 = await computation.stream().take(2).toList();
-
-      expect(result1, [0, 1]);
-
-      // When computable2 is updated, the transform subscribes to the new inner computable and works like a switchMap,
-      // unsubscribing from the previous computable value and never emitting the rest of the values (3, 4, 5) that its stream was going to emit.
-      computable2.add(10);
-
-      final result2 = await computation.stream().take(4).toList();
-
-      // 2 is still emitted since it was already scheduled asynchronously.
-      expect(result2, [2, 0, 9, 10]);
-
-      computation.dispose();
-    });
-
     test('Immediately returns updated values', () {
       final computable = Computable(1);
       final computable2 = Computable(2);

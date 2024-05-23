@@ -16,7 +16,7 @@ class Computation<T> extends Computable<T> with Recomputable<T> {
       computable._dependents.add(this);
     }
 
-    _init(computables);
+    _value = _recompute();
   }
 
   @override

@@ -17,7 +17,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
     _computation._dependents.add(this);
     _dependencies.add(_computation);
 
-    _init(computables);
+    _value = _recompute();
   }
 
   @override
