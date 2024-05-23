@@ -8,9 +8,9 @@ class Computable<T> {
 
   bool _isClosed = false;
 
-  late T _value;
-
   final Set<Recomputable> _dependents = {};
+
+  late T _value;
 
   /// Whether the [Computable] can have more than one observable subscription. A single-subscription
   /// observable will allow one subscriber and will release its resources automatically when its listener cancels its subscription.
@@ -26,7 +26,7 @@ class Computable<T> {
     this.dedupe = true,
   });
 
-  void _init() {
+  void _initController() {
     if (broadcast) {
       _controller = StreamController<T>.broadcast();
     } else {
@@ -62,7 +62,7 @@ class Computable<T> {
     _value = updatedValue;
 
     for (final dep in _dependents) {
-      dep.isDirty = true;
+      dep._dirty();
     }
 
     final controller = _controller;
@@ -86,9 +86,13 @@ class Computable<T> {
   /// the current value of the computable.
   Stream<T> stream() {
     if (_controller == null) {
-      _init();
+      _initController();
     }
     return _stream;
+  }
+
+  bool get isDirty {
+    return false;
   }
 
   static Computable<S> fromFuture<S>(

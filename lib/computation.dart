@@ -11,25 +11,28 @@ class Computation<T> extends Computable<T> with Recomputable<T> {
     super.broadcast = false,
     super.dedupe = false,
   }) : super._() {
-    init(computables);
-
     for (final computable in computables) {
+      _dependencies.add(computable);
       computable._dependents.add(this);
     }
+
+    _init(computables);
   }
 
   @override
   T _recompute() {
-    return compute(computables.map((computable) => computable.get()).toList());
+    return compute(
+      _dependencies.map((computable) => computable.get()).toList(),
+    );
   }
 
   @override
   dispose() {
-    for (final computable in computables) {
-      computable._dependents.remove(this);
-
-      if (!computable.broadcast) {
-        computable.dispose();
+    for (final dep in _dependencies) {
+      if (!dep.broadcast) {
+        dep.dispose();
+      } else {
+        dep._dependents.remove(this);
       }
     }
 

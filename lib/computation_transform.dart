@@ -15,16 +15,18 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
             Computation(computables: computables, compute: transform),
         super._() {
     _computation._dependents.add(this);
-    init(computables);
+    _dependencies.add(_computation);
+
+    _init(computables);
   }
 
   @override
   _recompute() {
     final innerComputable = _computation.get();
 
-    /// A computation transform could have been marked as dirty either because its inner computable
-    /// has a new value or its computation has a new inner computable. If the inner computable has changed,
-    /// then it removes its dependency on the previous computable and switches to the new one.
+    /// A computation transform could be recomputing because either its inner computable
+    /// has emitted a new value or its inner computable has changed. If the inner computable has changed,
+    /// then it removes its dependency on the previous inner computable and switches to the new one.
     ///
     /// In either scenario, it then returns the inner computable's latest value.
     if (identical(innerComputable, _innerComputable)) {
