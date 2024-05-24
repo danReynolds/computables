@@ -257,6 +257,23 @@ void main() {
 
       expect(computation.get(), 6);
     });
+
+    test('Returns updated values from a dirty inner computable', () {
+      final computable = Computable(1);
+      final computable2 = Computable(2);
+
+      final computation = computable.transform(
+        (input1) {
+          return computable2.map((input2) => input1 + input2);
+        },
+      );
+
+      expect(computation.get(), 3);
+
+      computable2.add(5);
+
+      expect(computation.get(), 6);
+    });
   });
 
   group('Subscriber', () {

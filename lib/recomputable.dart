@@ -25,13 +25,8 @@ mixin Recomputable<T> on Computable<T> {
       // 2. It frees up the main isolate to process other pending events before having to perform what could
       //    be a heavy recomputation.
       Future.delayed(Duration.zero, () {
-        // When the dirty computable's asynchronous recomputation is later run, it may no longer be necessary
-        // to recompute, since if the dirty computable's value had been accessed synchronously before it could
-        // process its async recomputation, it would've updated synchronously and marked itself as no longer dirty.
-        if (isDirty) {
-          _isDirty = false;
-          add(_recompute());
-        }
+        _isDirty = false;
+        add(_recompute());
       });
     }
   }
@@ -41,8 +36,7 @@ mixin Recomputable<T> on Computable<T> {
     // Since recomputations of dirty computables are performed asynchronously, if the value of a dirty
     // computable is accessed before it has been recomputed, then it must be recomputed synchronously.
     if (isDirty) {
-      _isDirty = false;
-      return add(_recompute());
+      return _recompute();
     }
 
     return _value;
