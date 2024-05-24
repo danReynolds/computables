@@ -150,6 +150,21 @@ void main() {
         expect(await future, [0, 2]);
       });
 
+      test('Recomputes immediately if accessed synchronously', () {
+        final computable = Computable(1);
+
+        final computation = computable.map((value) => value + 1);
+
+        expect(computation.get(), 2);
+
+        computable.add(5);
+
+        // The update to the computation's dependency computable is scheduled to be processed
+        // asynchronously, however, since its value has been accessed synchronously, it should
+        // recompute immediately.
+        expect(computation.get(), 6);
+      });
+
       test("Cancels non-broadcast computables automatically", () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
