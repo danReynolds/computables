@@ -25,7 +25,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
 
     /// A computation transform could be recomputing because either its inner computable
     /// has emitted a new value or its inner computable has changed. If the inner computable has changed,
-    /// then it removes its dependency on the previous inner computable and switches to the new one.
+    /// then it disposes the previous inner computable and switches to the new one.
     ///
     /// In either scenario, it then returns the inner computable's latest value.
     if (identical(innerComputable, _innerComputable)) {
