@@ -1,42 +1,48 @@
 part of 'computables.dart';
 
-/// A [ComputationTransform] transforms the input computables of a [Computation] into an output [Computable] and subscribes to it.
-class ComputationTransform<T> extends Computable<T> {
-  final List<Computable> computables;
-  final Computable<T> Function(List inputs) transform;
-  late final Computable<Computable<T>> _computation;
-  late final StreamSubscription<Computable<T>> _subscription;
-  StreamSubscription<T>? _innerSubscription;
+/// A [ComputationTransform] subscribes to a set of input computables and derives
+/// a new output computable from their inputs using the provided [transform] function.
+class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
+  final Computation<Computable<T>> _computation;
+  Computable<T>? _innerComputable;
 
   ComputationTransform({
-    required this.computables,
-    required this.transform,
+    required List<Computable> computables,
+    required Computable<T> Function(List inputs) transform,
     super.broadcast = false,
-  }) : super._() {
-    _computation = Computation(computables: computables, compute: transform);
-
-    _subscription = _computation._syncStream().listen((_) {
-      _recompute();
-    });
-
-    _recompute();
+    super.dedupe = false,
+  })  : _computation =
+            Computation(computables: computables, compute: transform),
+        super._() {
+    _computation._dependents.add(this);
+    _dependencies.add(_computation);
+    _value = _recompute();
   }
 
-  void _recompute() {
+  @override
+  _recompute() {
     final innerComputable = _computation.get();
-    _innerSubscription?.cancel();
-    _innerSubscription = innerComputable._syncStream().listen((value) {
-      add(value);
-    });
-    add(innerComputable.get());
+
+    /// A computation transform could be recomputing because either its inner computable
+    /// has emitted a new value or its inner computable has changed. If the inner computable has changed,
+    /// then it disposes the previous inner computable and switches to the new one.
+    ///
+    /// In either scenario, it then returns the inner computable's latest value.
+    if (identical(innerComputable, _innerComputable)) {
+      return innerComputable.get();
+    }
+
+    _innerComputable?.dispose();
+    _innerComputable = innerComputable;
+
+    innerComputable._dependents.add(this);
+
+    return innerComputable.get();
   }
 
   @override
   dispose() {
-    super.dispose();
-
     _computation.dispose();
-    _subscription.cancel();
-    _innerSubscription?.cancel();
+    super.dispose();
   }
 }

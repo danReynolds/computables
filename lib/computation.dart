@@ -1,48 +1,41 @@
 part of 'computables.dart';
 
-/// A [Computation] is used to derive data from the composition of multiple [Computable] inputs.
-class Computation<T> extends Computable<T> {
-  final List<Computable> computables;
+/// A [Computation] subscribes to a set of input computables and derives an output
+/// value from their inputs using the provided [compute] function.
+class Computation<T> extends Computable<T> with Recomputable<T> {
   final T Function(List inputs) compute;
-  final List<StreamSubscription> _subscriptions = [];
 
   Computation({
-    required this.computables,
+    required List<Computable> computables,
     required this.compute,
     super.broadcast = false,
+    super.dedupe = false,
   }) : super._() {
     for (final computable in computables) {
-      StreamSubscription? subscription;
-
-      subscription = computable._syncStream().listen((inputValue) {
-        _recompute();
-      }, onDone: () {
-        _subscriptions.remove(subscription);
-        if (_subscriptions.isEmpty) {
-          dispose();
-        }
-      });
-
-      _subscriptions.add(subscription);
+      _dependencies.add(computable);
+      computable._dependents.add(this);
     }
 
-    _recompute();
+    _value = _recompute();
   }
 
+  @override
   T _recompute() {
-    return add(
-      compute(
-        computables.map((computable) => computable.get()).toList(),
-      ),
+    return compute(
+      _dependencies.map((computable) => computable.get()).toList(),
     );
   }
 
   @override
   dispose() {
-    super.dispose();
-
-    for (final subscription in _subscriptions) {
-      subscription.cancel();
+    for (final dep in _dependencies) {
+      if (!dep.broadcast) {
+        dep.dispose();
+      } else {
+        dep._dependents.remove(this);
+      }
     }
+
+    super.dispose();
   }
 }

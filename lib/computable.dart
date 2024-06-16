@@ -3,38 +3,12 @@ part of 'computables.dart';
 typedef _Optional<T> = T?;
 
 class Computable<T> {
-  /// The synchronous stream controller is used for delivering updates to *internal*
-  /// subscribers like [Computation] and [ComputationTransform] so that they receive
-  /// updates immediately and always return the latest value through their [get] API.
-  /// Example:
-  /// ```dart
-  /// final computable1 = Computable(1);
-  /// final computable2 = Computable(2);
-
-  /// final computation = Computable.compute2(
-  ///   computable1,
-  ///   computable2,
-  ///   (input1, input2) => input1 + input2,
-  /// );
-  /// print(computation.get(), 3);
-  /// computable1.add(2);
-  /// print(computation.get(), 4);
-  /// ```
-  ///
-  /// If the asynchronous stream controller was used for both external and internal subscribers, then
-  /// the update to `computable1` wouldn't update the `computation` within the current task of the event loop, and
-  /// accessing the computation's latest value through the `get` API would be stale. Instead, we use a sync stream controller
-  /// so that internal subscribers like the computation immediately reflect the update.
-  late final StreamController<T> _syncController;
-
-  /// The asynchronous stream controller is used for delivering updates to *external*
-  /// subscribers accessing the computable from the [stream] API.
-  late final StreamController<T> _asyncController;
-
-  late StreamFactory<T> _valueStream;
+  StreamController<T>? _controller;
+  late StreamFactory<T> _stream;
 
   bool _isClosed = false;
-  bool _isInitialized = false;
+
+  final Set<Recomputable> _dependents = {};
 
   late T _value;
 
@@ -47,28 +21,21 @@ class Computable<T> {
   final bool dedupe;
 
   Computable(
-    T initialValue, {
+    this._value, {
     this.broadcast = false,
     this.dedupe = true,
-  }) {
-    _init(initialValue);
-  }
+  });
 
-  void _init(T initialValue) {
+  void _initController() {
     if (broadcast) {
-      _syncController = StreamController<T>.broadcast(sync: true);
-      _asyncController = StreamController<T>.broadcast();
+      _controller = StreamController<T>.broadcast();
     } else {
-      _syncController = StreamController<T>(sync: true, onCancel: dispose);
-      _asyncController = StreamController<T>(onCancel: dispose);
+      _controller = StreamController<T>(onCancel: dispose);
     }
 
-    _valueStream = StreamFactory(() {
-      return _asyncController.stream.startWith(_value);
+    _stream = StreamFactory(() {
+      return _controller!.stream.startWith(_value);
     });
-
-    _isInitialized = true;
-    _value = initialValue;
   }
 
   /// Private constructor used by [Computation] and [ComputationTransform] to instantiate a [Computable]
@@ -80,8 +47,7 @@ class Computable<T> {
 
   void dispose() {
     _isClosed = true;
-    _asyncController.close();
-    _syncController.close();
+    _controller?.close();
   }
 
   bool get isClosed {
@@ -89,22 +55,19 @@ class Computable<T> {
   }
 
   T add(T updatedValue) {
-    if (!_isInitialized) {
-      _init(updatedValue);
-      return _value;
-    }
-
     if (isClosed || _value == updatedValue && dedupe) {
       return _value;
     }
 
     _value = updatedValue;
 
-    if (_syncController.hasListener) {
-      _syncController.add(_value);
+    for (final dep in _dependents) {
+      dep._dirty();
     }
-    if (_asyncController.hasListener) {
-      _asyncController.add(_value);
+
+    final controller = _controller;
+    if (controller != null && controller.hasListener) {
+      controller.add(_value);
     }
 
     return _value;
@@ -119,16 +82,17 @@ class Computable<T> {
     return _value;
   }
 
-  /// Private synchronous stream API used by [Computation] and [ComputationTransform] to immediately
-  /// recompute updates from dependencies.
-  Stream<T> _syncStream() {
-    return _syncController.stream;
-  }
-
   /// Returns of a [Stream] of values emitted by the [Computable]. The stream begins with
   /// the current value of the computable.
   Stream<T> stream() {
-    return _valueStream;
+    if (_controller == null) {
+      _initController();
+    }
+    return _stream;
+  }
+
+  bool get isDirty {
+    return false;
   }
 
   static Computable<S> fromFuture<S>(

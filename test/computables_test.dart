@@ -18,7 +18,7 @@ void main() {
       computable.add(6);
     });
 
-    test('map', () {
+    test('map', () async {
       final computable = Computable(1);
       final computation = computable.map(
         (value) {
@@ -28,24 +28,36 @@ void main() {
 
       expectLater(
         computation.stream(),
-        emitsInOrder([2, 3, 4]),
+        emitsInOrder([2, 4, 5]),
       );
 
+      // Ignores intermediate values.
       computable.add(2);
+
       computable.add(3);
+
+      await Future.delayed(const Duration(milliseconds: 1));
+
+      computable.add(4);
     });
 
-    test('transform', () {
-      final computation = Computable(1).transform(
+    test('transform', () async {
+      final computable = Computable(1);
+
+      final computation = computable.transform(
         (value) {
           return Computable(value + 1);
         },
       );
 
-      expectLater(
-        computation.stream(),
-        emits(2),
-      );
+      expectLater(computation.stream(), emitsInOrder([2, 4]));
+
+      await Future.delayed(const Duration(milliseconds: 1));
+
+      // Ignores intermediate values.
+      computable.add(2);
+
+      computable.add(3);
     });
 
     test("emits an initial null", () {
@@ -83,24 +95,74 @@ void main() {
   group(
     'Computations',
     () {
-      test('Compute multiple inputs', () {
+      test('Computes multiple inputs', () async {
+        final computable1 = Computable(0);
+        final computable2 = Computable(0);
+
         final computation = Computable.compute2(
-          Computable.fromFuture(
-            Future.value(1),
-            initialValue: 0,
-          ),
-          Computable.fromStream(
-            Stream.value(2),
-            initialValue: 0,
-          ),
+          computable1,
+          computable2,
           (input1, input2) => input1 + input2,
         );
 
         expect(computation.get(), 0);
-        expectLater(
-          computation.stream(),
-          emitsInOrder([0, 1, 3]),
+
+        final future = computation.stream().take(4).toList();
+
+        computable1.add(1);
+        expect(computation.get(), 1);
+
+        await Future.delayed(const Duration(milliseconds: 1));
+
+        computable1.add(2);
+        expect(computation.get(), 2);
+
+        await Future.delayed(const Duration(milliseconds: 1));
+
+        computable2.add(2);
+        expect(computation.get(), 4);
+
+        expect(
+          await future,
+          [0, 1, 2, 4],
         );
+      });
+
+      test('Does not broadcast intermediate values from the same task',
+          () async {
+        final computable1 = Computable(0);
+        final computable2 = Computable(0);
+
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => input1 + input2,
+        );
+
+        final future = computation.stream().take(2).toList();
+
+        expect(computation.get(), 0);
+
+        // This intermediate update in the same task is not broadcast by the computation.
+        computable1.add(1);
+        computable1.add(2);
+
+        expect(await future, [0, 2]);
+      });
+
+      test('Recomputes immediately if accessed synchronously', () {
+        final computable = Computable(1);
+
+        final computation = computable.map((value) => value + 1);
+
+        expect(computation.get(), 2);
+
+        computable.add(5);
+
+        // The update to the computation's dependency computable is scheduled to be processed
+        // asynchronously, however, since its value has been accessed synchronously, it should
+        // recompute immediately.
+        expect(computation.get(), 6);
       });
 
       test("Cancels non-broadcast computables automatically", () async {
@@ -162,56 +224,19 @@ void main() {
         computable,
         computable2,
         (input1, input2) {
-          final value = input2 - input1;
-          return Computable.fromStream(
-            Stream.fromIterable([value, value + 1, value + 2]),
-            initialValue: 0,
-          );
+          return Computable(input2 - input1);
         },
-        broadcast: true,
       );
 
-      final result1 = await computation.stream().take(4).toList();
+      expect(computation.get(), 1);
 
-      expect(result1, [0, 1, 2, 3]);
+      final future = computation.stream().take(2).toList();
 
       computable2.add(5);
 
-      final result2 = await computation.stream().take(4).toList();
-      expect(result2, [0, 4, 5, 6]);
+      expect(computation.get(), 4);
 
-      computation.dispose();
-    });
-
-    test('Cancels the previous inner computable', () async {
-      final computable = Computable(1);
-      final computable2 = Computable(2);
-
-      final computation = Computable.transform2(
-        computable,
-        computable2,
-        (input1, input2) {
-          final value = input2 - input1;
-          return Computable.fromStream(
-            Stream.fromIterable([value, value + 1, value + 2]),
-            initialValue: 0,
-          );
-        },
-        broadcast: true,
-      );
-
-      final result1 = await computation.stream().take(2).toList();
-
-      expect(result1, [0, 1]);
-
-      // When computable2 is updated, the transform's subscribes to the new inner computable and works like a switchMap,
-      // unsubscribing from the previous computable value and never emits the rest of the values (2,3) that its stream was going to emit.
-      computable2.add(5);
-
-      final result2 = await computation.stream().take(4).toList();
-      expect(result2, [0, 4, 5, 6]);
-
-      computation.dispose();
+      expect(await future, [1, 4]);
     });
 
     test('Immediately returns updated values', () {
