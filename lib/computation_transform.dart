@@ -14,9 +14,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {
-    _computation._dependents.add(this);
-    _dependencies.add(_computation);
-    _value = _recompute();
+    init([_computation]);
   }
 
   @override
@@ -34,12 +32,11 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
 
     if (_innerComputable != null) {
       _innerComputable!.dispose();
-      _dependencies.remove(innerComputable);
+      _removeDep(_innerComputable!);
     }
 
     _innerComputable = innerComputable;
-    innerComputable._dependents.add(this);
-    _dependencies.add(innerComputable);
+    _addDep(innerComputable);
 
     return innerComputable.get();
   }

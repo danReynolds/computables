@@ -6,11 +6,40 @@ mixin Recomputable<T> on Computable<T> {
   /// tree does not need to be checked if the computable has been directly marked as dirty.
   bool _isDirty = false;
 
-  final Set<Computable> _dependencies = {};
+  T? _pendingValue;
+
+  final Set<Computable> _deps = {};
+  final Set<Computable> _deepDeps = {};
+
+  void init(List<Computable> deps) {
+    for (final dep in deps) {
+      _addDep(dep);
+    }
+    _value = _recompute();
+  }
+
+  void _addDep(Computable dep) {
+    _deps.add(dep);
+    if (dep.deepDirtyCheck) {
+      _deepDeps.add(dep);
+    }
+    dep._dependents.add(this);
+  }
+
+  void _removeDep(Computable dep) {
+    _deps.remove(dep);
+    _deepDeps.remove(dep);
+    dep._dependents.remove(this);
+  }
+
+  @override
+  get deepDirtyCheck {
+    return _deepDeps.isNotEmpty;
+  }
 
   @override
   get isDirty {
-    return _isDirty || _dependencies.any((dep) => dep.isDirty);
+    return _isDirty || deepDirtyCheck && _deepDeps.any((dep) => dep.isDirty);
   }
 
   void _dirty() {
@@ -25,8 +54,15 @@ mixin Recomputable<T> on Computable<T> {
       // 2. It frees up the main isolate to process other pending events before having to perform what could
       //    be a heavy recomputation.
       Future.delayed(Duration.zero, () {
-        _isDirty = false;
-        add(_recompute());
+        // The computable may have recomputed in between scheduling and executing its async recomputation,
+        // in which case if it has not been re-dirtied, the cached pending value can be used instead of recomputing.
+        if (isDirty) {
+          add(_recompute());
+          _isDirty = false;
+        } else {
+          add(_pendingValue ?? _recompute());
+        }
+        _pendingValue = null;
       });
     }
   }
@@ -36,10 +72,13 @@ mixin Recomputable<T> on Computable<T> {
     // Since recomputations of dirty computables are performed asynchronously, if the value of a dirty
     // computable is accessed before it has been recomputed, then it must be recomputed synchronously.
     if (isDirty) {
-      return _recompute();
+      _isDirty = false;
+      // The recomputed value is cached so that it does not need to be recomputed if it has not been re-marked
+      // as dirty when it asynchronously runs its recomputation.
+      return _pendingValue = _recompute();
     }
 
-    return _value;
+    return _pendingValue ?? _value;
   }
 
   T _recompute();

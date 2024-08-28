@@ -3,8 +3,14 @@ part of computables;
 /// Returns a new stream produced by calling [factory] whenever a listener subscribes to the [StreamFactory].
 class StreamFactory<T> extends Stream<T> {
   final Stream<T> Function() factory;
+  final bool _isBroadcast;
 
-  StreamFactory(this.factory);
+  StreamFactory(this.factory, this._isBroadcast);
+
+  @override
+  get isBroadcast {
+    return _isBroadcast;
+  }
 
   @override
   StreamSubscription<T> listen(
