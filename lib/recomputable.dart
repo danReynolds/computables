@@ -64,7 +64,7 @@ mixin Recomputable<T> on Computable<T> {
       // A dirty recomputable is scheduled for recomputation asynchronously. This has a couple advantages:
       //
       // 1. It batches together synchronous updates to multiple dependencies into a single recomputation.
-      // 2. It frees up the main thread to process other pending events before having to perform what could
+      // 2. It frees up the main isolate to process other pending events before having to perform what could
       //    be a heavy recomputation.
       if (!_isScheduled) {
         _isScheduled = true;
