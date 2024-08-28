@@ -6,6 +6,9 @@ mixin Recomputable<T> on Computable<T> {
   /// tree does not need to be checked if the computable has been directly marked as dirty.
   bool _isDirty = false;
 
+  /// Whether the recomputable is scheduled for recomputation.
+  bool _isScheduled = false;
+
   T? _pendingValue;
 
   final Set<Computable> _deps = {};
@@ -42,26 +45,29 @@ mixin Recomputable<T> on Computable<T> {
     return _isDirty || deepDirtyCheck && _deepDeps.any((dep) => dep.isDirty);
   }
 
-  void _dirty([
+  void _dirty(
     /// Whether the dirtied recomputable should be scheduled for async recomputation
     /// when it is marked as dirty.
-    bool schedule = false,
-  ]) {
+    bool schedule,
+  ) {
     if (!_isDirty) {
       _isDirty = true;
 
       for (final dep in _dependents) {
-        dep._dirty();
+        // Dependencies are marked as dirty immediately, however they are not scheduled
+        // yet, this is deferred until after the current computable's recomputation is completed.
+        dep._dirty(false);
       }
+    }
 
-      // When a computable's dependencies are updated and the computable is marked as dirty,
-      // it schedules an async task to perform its recomputation. Performing the recomputation
-      // asynchronously has a few benefits:
+    if (schedule) {
+      // A dirty recomputable is scheduled for recomputation asynchronously. This has a couple advantages:
       //
       // 1. It batches together synchronous updates to multiple dependencies into a single recomputation.
-      // 2. It frees up the main isolate to process other pending events before having to perform what could
+      // 2. It frees up the main thread to process other pending events before having to perform what could
       //    be a heavy recomputation.
-      if (schedule) {
+      if (!_isScheduled) {
+        _isScheduled = true;
         Future.delayed(Duration.zero, () {
           // The computable may have recomputed in between scheduling and executing its async recomputation,
           // in which case if it has not been re-dirtied, the cached pending value can be used instead of recomputing.
@@ -72,6 +78,7 @@ mixin Recomputable<T> on Computable<T> {
             add(_pendingValue ?? _recompute());
           }
           _pendingValue = null;
+          _isScheduled = false;
         });
       }
     }

@@ -9,6 +9,13 @@ void main() {
       expect(Computable(2).get(), 2);
     });
 
+    test('add', () {
+      final computable = Computable(2);
+      expect(computable.get(), 2);
+      computable.add(3);
+      expect(computable.get(), 3);
+    });
+
     group("stream", () {
       test('Emits values on the stream', () {
         final computable = Computable(2);
@@ -72,7 +79,7 @@ void main() {
 
       await Future.delayed(const Duration(milliseconds: 1));
 
-      // Ignores intermediate values.
+      // Does not emit intermediate values.
       computable.add(2);
 
       computable.add(3);
@@ -111,9 +118,9 @@ void main() {
   });
 
   group(
-    'Computations',
+    'Computation',
     () {
-      test('compute multiple inputs', () async {
+      test('computes multiple inputs', () async {
         final computable1 = Computable(0);
         final computable2 = Computable(0);
 
@@ -246,13 +253,9 @@ void main() {
         },
       );
 
-      expect(computation.get(), 1);
-
       final future = computation.stream().take(2).toList();
 
       computable2.add(5);
-
-      expect(computation.get(), 4);
 
       expect(await future, [1, 4]);
     });
