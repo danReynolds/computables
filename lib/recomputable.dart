@@ -6,33 +6,81 @@ mixin Recomputable<T> on Computable<T> {
   /// tree does not need to be checked if the computable has been directly marked as dirty.
   bool _isDirty = false;
 
-  final Set<Computable> _dependencies = {};
+  /// Whether the recomputable is scheduled for recomputation.
+  bool _isScheduled = false;
+
+  T? _pendingValue;
+
+  final Set<Computable> _deps = {};
+  final Set<Computable> _deepDeps = {};
+
+  void init(List<Computable> deps) {
+    for (final dep in deps) {
+      _addDep(dep);
+    }
+    _value = _recompute();
+  }
+
+  void _addDep(Computable dep) {
+    _deps.add(dep);
+    if (dep.deepDirtyCheck) {
+      _deepDeps.add(dep);
+    }
+    dep._dependents.add(this);
+  }
+
+  void _removeDep(Computable dep) {
+    _deps.remove(dep);
+    _deepDeps.remove(dep);
+    dep._dependents.remove(this);
+  }
+
+  @override
+  get deepDirtyCheck {
+    return _deepDeps.isNotEmpty;
+  }
 
   @override
   get isDirty {
-    return _isDirty || _dependencies.any((dep) => dep.isDirty);
+    return _isDirty || deepDirtyCheck && _deepDeps.any((dep) => dep.isDirty);
   }
 
-  void _dirty() {
+  void _dirty(
+    /// Whether the dirtied recomputable should be scheduled for async recomputation
+    /// when it is marked as dirty.
+    bool schedule,
+  ) {
     if (!_isDirty) {
       _isDirty = true;
 
-      // When a computable's dependencies are updated and the computable is marked as dirty,
-      // it schedules an async task to perform its recomputation. Performing the recomputation
-      // asynchronously has a few benefits:
+      for (final dep in _dependents) {
+        // Dependencies are marked as dirty immediately, however they are not scheduled
+        // yet, this is deferred until after the current computable's recomputation is completed.
+        dep._dirty(false);
+      }
+    }
+
+    if (schedule) {
+      // A dirty recomputable is scheduled for recomputation asynchronously. This has a couple advantages:
       //
       // 1. It batches together synchronous updates to multiple dependencies into a single recomputation.
       // 2. It frees up the main isolate to process other pending events before having to perform what could
       //    be a heavy recomputation.
-      Future.delayed(Duration.zero, () {
-        // When the dirty computable's asynchronous recomputation is later run, it may no longer be necessary
-        // to recompute, since if the dirty computable's value had been accessed synchronously before it could
-        // process its async recomputation, it would've updated synchronously and marked itself as no longer dirty.
-        if (isDirty) {
-          _isDirty = false;
-          add(_recompute());
-        }
-      });
+      if (!_isScheduled) {
+        _isScheduled = true;
+        Future.delayed(Duration.zero, () {
+          // The computable may have recomputed in between scheduling and executing its async recomputation,
+          // in which case if it has not been re-dirtied, the cached pending value can be used instead of recomputing.
+          if (isDirty) {
+            add(_recompute());
+            _isDirty = false;
+          } else {
+            add(_pendingValue ?? _recompute());
+          }
+          _pendingValue = null;
+          _isScheduled = false;
+        });
+      }
     }
   }
 
@@ -42,10 +90,12 @@ mixin Recomputable<T> on Computable<T> {
     // computable is accessed before it has been recomputed, then it must be recomputed synchronously.
     if (isDirty) {
       _isDirty = false;
-      return add(_recompute());
+      // The recomputed value is cached so that it does not need to be recomputed if it has not been re-marked
+      // as dirty when it asynchronously runs its recomputation.
+      return _pendingValue = _recompute();
     }
 
-    return _value;
+    return _pendingValue ?? _value;
   }
 
   T _recompute();

@@ -14,9 +14,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {
-    _computation._dependents.add(this);
-    _dependencies.add(_computation);
-    _value = _recompute();
+    init([_computation]);
   }
 
   @override
@@ -25,17 +23,20 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
 
     /// A computation transform could be recomputing because either its inner computable
     /// has emitted a new value or its inner computable has changed. If the inner computable has changed,
-    /// then it disposes the previous inner computable and switches to the new one.
+    /// then it disposes the previous inner computable, removing it from its dependencies and switches to the new one.
     ///
     /// In either scenario, it then returns the inner computable's latest value.
     if (identical(innerComputable, _innerComputable)) {
       return innerComputable.get();
     }
 
-    _innerComputable?.dispose();
-    _innerComputable = innerComputable;
+    if (_innerComputable != null) {
+      _innerComputable!.dispose();
+      _removeDep(_innerComputable!);
+    }
 
-    innerComputable._dependents.add(this);
+    _innerComputable = innerComputable;
+    _addDep(innerComputable);
 
     return innerComputable.get();
   }

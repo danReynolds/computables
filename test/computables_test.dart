@@ -9,13 +9,38 @@ void main() {
       expect(Computable(2).get(), 2);
     });
 
-    test("stream", () {
+    test('add', () {
       final computable = Computable(2);
+      expect(computable.get(), 2);
+      computable.add(3);
+      expect(computable.get(), 3);
+    });
 
-      expectLater(computable.stream(), emitsInOrder([2, 4, 6]));
+    group("stream", () {
+      test('Emits values on the stream', () {
+        final computable = Computable(2);
 
-      computable.add(4);
-      computable.add(6);
+        expectLater(computable.stream(), emitsInOrder([2, 4, 6]));
+
+        computable.add(4);
+        computable.add(6);
+      });
+
+      test(
+        'Is a non-broadcast stream by default',
+        () {
+          final computable = Computable(2);
+          expect(computable.stream().isBroadcast, false);
+        },
+      );
+
+      test(
+        'Is a broadcast stream when specified',
+        () {
+          final computable = Computable(2, broadcast: true);
+          expect(computable.stream().isBroadcast, true);
+        },
+      );
     });
 
     test('map', () async {
@@ -54,7 +79,7 @@ void main() {
 
       await Future.delayed(const Duration(milliseconds: 1));
 
-      // Ignores intermediate values.
+      // Does not emit intermediate values.
       computable.add(2);
 
       computable.add(3);
@@ -65,7 +90,7 @@ void main() {
       expectLater(computable.stream(), emitsInOrder([null]));
     });
 
-    test("Ignores duplicates by default", () {
+    test("ignores duplicates by default", () {
       final computable = Computable(1);
 
       expectLater(
@@ -78,7 +103,7 @@ void main() {
       computable.add(3);
     });
 
-    test("Re-emits duplicates when specified", () {
+    test("re-emits duplicates when specified", () {
       final computable = Computable(1, dedupe: false);
 
       expectLater(
@@ -93,9 +118,9 @@ void main() {
   });
 
   group(
-    'Computations',
+    'Computation',
     () {
-      test('Computes multiple inputs', () async {
+      test('computes multiple inputs', () async {
         final computable1 = Computable(0);
         final computable2 = Computable(0);
 
@@ -128,7 +153,7 @@ void main() {
         );
       });
 
-      test('Does not broadcast intermediate values from the same task',
+      test('does not broadcast intermediate values from the same task',
           () async {
         final computable1 = Computable(0);
         final computable2 = Computable(0);
@@ -150,7 +175,7 @@ void main() {
         expect(await future, [0, 2]);
       });
 
-      test('Recomputes immediately if accessed synchronously', () {
+      test('recomputes immediately if accessed synchronously', () {
         final computable = Computable(1);
 
         final computation = computable.map((value) => value + 1);
@@ -165,7 +190,7 @@ void main() {
         expect(computation.get(), 6);
       });
 
-      test("Cancels non-broadcast computables automatically", () async {
+      test("cancels non-broadcast computables automatically", () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
         final computation = Computable.compute2(
@@ -180,7 +205,7 @@ void main() {
         expect(computable2.isClosed, true);
       });
 
-      test("Does not cancel broadcast computables automatically", () async {
+      test("does not cancel broadcast computables automatically", () async {
         final computable1 = Computable(1, broadcast: true);
         final computable2 = Computable(2);
 
@@ -198,7 +223,7 @@ void main() {
         computable1.dispose();
       });
 
-      test('Immediately returns updated values', () {
+      test('immediately returns updated values', () {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
 
@@ -216,7 +241,7 @@ void main() {
   );
 
   group("Transforms", () {
-    test('Emits values from the inner computable', () async {
+    test('emits values from the inner computable', () async {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
@@ -228,18 +253,14 @@ void main() {
         },
       );
 
-      expect(computation.get(), 1);
-
       final future = computation.stream().take(2).toList();
 
       computable2.add(5);
 
-      expect(computation.get(), 4);
-
       expect(await future, [1, 4]);
     });
 
-    test('Immediately returns updated values', () {
+    test('immediately returns updated values', () {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
@@ -257,10 +278,27 @@ void main() {
 
       expect(computation.get(), 6);
     });
+
+    test('returns updated values from a dirty inner computable', () {
+      final computable = Computable(1);
+      final computable2 = Computable(2);
+
+      final computation = computable.transform(
+        (input1) {
+          return computable2.map((input2) => input1 + input2);
+        },
+      );
+
+      expect(computation.get(), 3);
+
+      computable2.add(5);
+
+      expect(computation.get(), 6);
+    });
   });
 
   group('Subscriber', () {
-    test('Forwards computable', () async {
+    test('forwards computable', () async {
       final subscriber = Computable.subscriber(0);
 
       subscriber.forward(Computable(1));
@@ -268,7 +306,7 @@ void main() {
       expect(subscriber.get(), 1);
     });
 
-    test('Subscribes to computable', () async {
+    test('subscribes to computable', () async {
       int result = 0;
       final subscriber = Computable.subscriber(0);
 
@@ -279,7 +317,7 @@ void main() {
       expect(result, 1);
     });
 
-    test('Forwards stream', () {
+    test('forwards stream', () {
       final subscriber = Computable.subscriber(0);
 
       subscriber.forwardStream(Stream.value(1));
@@ -290,7 +328,7 @@ void main() {
       );
     });
 
-    test('Forwards future', () {
+    test('forwards future', () {
       final subscriber = Computable.subscriber(0);
 
       subscriber.forwardFuture(Future.value(1));

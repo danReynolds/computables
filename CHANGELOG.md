@@ -1,3 +1,7 @@
+## 4.0.0
+
+* Rewrite the recomputable dependency graph.
+
 ## 3.0.1
 
 * Fix bug with computable builder factory disposing computables unnecessarily.

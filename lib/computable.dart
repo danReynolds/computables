@@ -20,10 +20,14 @@ class Computable<T> {
   /// Whether duplicate values should be discarded and not re-emitted to subscribers.
   final bool dedupe;
 
+  /// Whether the [Computable] must always be re-evaluated when checking if it is dirty.
+  bool deepDirtyCheck;
+
   Computable(
     this._value, {
     this.broadcast = false,
     this.dedupe = true,
+    this.deepDirtyCheck = false,
   });
 
   void _initController() {
@@ -35,7 +39,7 @@ class Computable<T> {
 
     _stream = StreamFactory(() {
       return _controller!.stream.startWith(_value);
-    });
+    }, broadcast);
   }
 
   /// Private constructor used by [Computation] and [ComputationTransform] to instantiate a [Computable]
@@ -43,6 +47,7 @@ class Computable<T> {
   Computable._({
     this.broadcast = false,
     this.dedupe = true,
+    this.deepDirtyCheck = false,
   });
 
   void dispose() {
@@ -62,7 +67,7 @@ class Computable<T> {
     _value = updatedValue;
 
     for (final dep in _dependents) {
-      dep._dirty();
+      dep._dirty(true);
     }
 
     final controller = _controller;
