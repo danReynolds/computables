@@ -67,7 +67,7 @@ class Computable<T> {
     _value = updatedValue;
 
     for (final dep in _dependents) {
-      dep._dirty();
+      dep._dirty(true);
     }
 
     final controller = _controller;

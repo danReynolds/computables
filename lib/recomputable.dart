@@ -42,9 +42,17 @@ mixin Recomputable<T> on Computable<T> {
     return _isDirty || deepDirtyCheck && _deepDeps.any((dep) => dep.isDirty);
   }
 
-  void _dirty() {
+  void _dirty([
+    /// Whether the dirtied recomputable should be scheduled for async recomputation
+    /// when it is marked as dirty.
+    bool schedule = false,
+  ]) {
     if (!_isDirty) {
       _isDirty = true;
+
+      for (final dep in _dependents) {
+        dep._dirty();
+      }
 
       // When a computable's dependencies are updated and the computable is marked as dirty,
       // it schedules an async task to perform its recomputation. Performing the recomputation
@@ -53,17 +61,19 @@ mixin Recomputable<T> on Computable<T> {
       // 1. It batches together synchronous updates to multiple dependencies into a single recomputation.
       // 2. It frees up the main isolate to process other pending events before having to perform what could
       //    be a heavy recomputation.
-      Future.delayed(Duration.zero, () {
-        // The computable may have recomputed in between scheduling and executing its async recomputation,
-        // in which case if it has not been re-dirtied, the cached pending value can be used instead of recomputing.
-        if (isDirty) {
-          add(_recompute());
-          _isDirty = false;
-        } else {
-          add(_pendingValue ?? _recompute());
-        }
-        _pendingValue = null;
-      });
+      if (schedule) {
+        Future.delayed(Duration.zero, () {
+          // The computable may have recomputed in between scheduling and executing its async recomputation,
+          // in which case if it has not been re-dirtied, the cached pending value can be used instead of recomputing.
+          if (isDirty) {
+            add(_recompute());
+            _isDirty = false;
+          } else {
+            add(_pendingValue ?? _recompute());
+          }
+          _pendingValue = null;
+        });
+      }
     }
   }
 
