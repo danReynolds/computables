@@ -38,7 +38,7 @@ class Computable<T> {
     }
 
     _stream = StreamFactory(() {
-      return _controller!.stream.startWith(_value);
+      return _controller!.stream.startWith(get());
     }, broadcast);
   }
 

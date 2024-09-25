@@ -1,3 +1,7 @@
+## 4.0.1
+
+* Fix bug with initial stream value.
+
 ## 4.0.0
 
 * Rewrite the recomputable dependency graph.
