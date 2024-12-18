@@ -5,12 +5,14 @@ extension ComputableExtensions<T> on Computable<T> {
     S Function(T value) map, {
     bool broadcast = false,
     bool dedupe = false,
+    bool lazy = false,
   }) {
     return Computation(
       computables: [this],
       compute: (inputs) => map(inputs.first),
       broadcast: broadcast,
       dedupe: dedupe,
+      lazy: lazy,
     );
   }
 
@@ -18,12 +20,14 @@ extension ComputableExtensions<T> on Computable<T> {
     Computable<S> Function(T value) transform, {
     bool broadcast = false,
     bool dedupe = false,
+    bool lazy = false,
   }) {
     return ComputationTransform(
       computables: [this],
       transform: (inputs) => transform(inputs.first),
       broadcast: broadcast,
       dedupe: dedupe,
+      lazy: lazy,
     );
   }
 }

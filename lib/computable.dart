@@ -53,6 +53,10 @@ class Computable<T> {
   void dispose() {
     _isClosed = true;
     _controller?.close();
+
+    for (final dep in _dependents) {
+      dep._removeDep(this);
+    }
   }
 
   bool get isClosed {
@@ -60,6 +64,8 @@ class Computable<T> {
   }
 
   T add(T updatedValue) {
+    assert(!isClosed, 'Cannot add value to a closed computable.');
+
     if (isClosed || _value == updatedValue && dedupe) {
       return _value;
     }
@@ -71,8 +77,8 @@ class Computable<T> {
     }
 
     final controller = _controller;
-    if (controller != null && controller.hasListener) {
-      controller.add(_value);
+    if (hasListener) {
+      controller!.add(_value);
     }
 
     return _value;
@@ -96,8 +102,23 @@ class Computable<T> {
     return _stream;
   }
 
+  bool get isLazy {
+    return false;
+  }
+
   bool get isDirty {
     return false;
+  }
+
+  bool get hasListener {
+    return _controller?.hasListener ?? false;
+  }
+
+  Map inspect() {
+    return {
+      "value": get(),
+      "dependents": _dependents,
+    };
   }
 
   static Computable<S> fromFuture<S>(
@@ -144,11 +165,13 @@ class Computable<T> {
     Computable<S2> computable2,
     T Function(S1 input1, S2 input2) compute, {
     bool broadcast = false,
+    bool lazy = false,
   }) {
     return Computation<T>(
       computables: [computable1, computable2],
       compute: (inputs) => compute(inputs[0], inputs[1]),
       broadcast: broadcast,
+      lazy: lazy,
     );
   }
 
@@ -158,11 +181,13 @@ class Computable<T> {
     Computable<S3> computable3,
     T Function(S1 input1, S2 input2, S3 input3) compute, {
     bool broadcast = false,
+    bool lazy = false,
   }) {
     return Computation<T>(
       computables: [computable1, computable2, computable3],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2]),
       broadcast: broadcast,
+      lazy: lazy,
     );
   }
 
@@ -178,11 +203,13 @@ class Computable<T> {
       S4 input4,
     ) compute, {
     bool broadcast = false,
+    bool lazy = false,
   }) {
     return Computation<T>(
       computables: [computable1, computable2, computable3, computable4],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2], inputs[3]),
       broadcast: broadcast,
+      lazy: lazy,
     );
   }
 
@@ -191,11 +218,13 @@ class Computable<T> {
     Computable<S2> computable2,
     Computable<T> Function(S1 input1, S2 input2) transform, {
     bool broadcast = false,
+    bool lazy = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2],
       transform: (inputs) => transform(inputs[0], inputs[1]),
       broadcast: broadcast,
+      lazy: lazy,
     );
   }
 
@@ -205,11 +234,13 @@ class Computable<T> {
     Computable<S3> computable3,
     Computable<T> Function(S1 input1, S2 input2, S3 input3) transform, {
     bool broadcast = false,
+    bool lazy = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3],
       transform: (inputs) => transform(inputs[0], inputs[1], inputs[2]),
       broadcast: broadcast,
+      lazy: lazy,
     );
   }
 
@@ -225,12 +256,14 @@ class Computable<T> {
       S4 input4,
     ) transform, {
     bool broadcast = false,
+    bool lazy = false,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3, computable4],
       transform: (inputs) =>
           transform(inputs[0], inputs[1], inputs[2], inputs[3]),
       broadcast: broadcast,
+      lazy: lazy,
     );
   }
 }

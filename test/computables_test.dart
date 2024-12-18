@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:computables/computables.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'utils.dart';
+
 void main() {
   group('Computable', () {
     test("get", () {
@@ -61,7 +63,7 @@ void main() {
 
       computable.add(3);
 
-      await Future.delayed(const Duration(milliseconds: 1));
+      await pause();
 
       computable.add(4);
     });
@@ -77,7 +79,7 @@ void main() {
 
       expectLater(computation.stream(), emitsInOrder([2, 4]));
 
-      await Future.delayed(const Duration(milliseconds: 1));
+      await pause();
 
       // Does not emit intermediate values.
       computable.add(2);
@@ -115,6 +117,44 @@ void main() {
       computable.add(2);
       computable.add(3);
     });
+
+    group(
+      "dispose",
+      () {
+        test(
+          'Disposes non-broadcast dependents',
+          () {
+            final computable = Computable(1);
+
+            final computation = computable.map((value) => value + 1);
+
+            expect(computation.inspect()['dependencies'].length, 1);
+
+            computable.dispose();
+
+            expect(computation.inspect()['dependencies'].length, 0);
+            expect(computation.isClosed, true);
+          },
+        );
+
+        test(
+          'Does not dispose broadcast dependents',
+          () {
+            final computable = Computable(1);
+
+            final computation =
+                computable.map((value) => value + 1, broadcast: true);
+
+            expect(computation.inspect()['dependencies'].length, 1);
+
+            computable.dispose();
+
+            expect(computation.inspect()['dependencies'].length, 0);
+            expect(computation.isClosed, false);
+          },
+        );
+      },
+    );
   });
 
   group(
@@ -137,12 +177,12 @@ void main() {
         computable1.add(1);
         expect(computation.get(), 1);
 
-        await Future.delayed(const Duration(milliseconds: 1));
+        await pause();
 
         computable1.add(2);
         expect(computation.get(), 2);
 
-        await Future.delayed(const Duration(milliseconds: 1));
+        await pause();
 
         computable2.add(2);
         expect(computation.get(), 4);
@@ -237,10 +277,38 @@ void main() {
         computable1.add(2);
         expect(computation.get(), 4);
       });
+
+      test('Does not schedule a recomputation when lazy', () async {
+        final computable1 = Computable(1);
+        final computable2 = Computable(2);
+
+        final List<num> values = [];
+
+        final computation = Computable.compute2(
+          computable1,
+          computable2,
+          (input1, input2) => (values..add(input1 + input2)).last,
+          lazy: true,
+        );
+
+        await pause();
+
+        expect(values.length, 0);
+        expect(computation.get(), 3);
+        expect(values.length, 1);
+
+        computable1.add(2);
+
+        await pause();
+
+        expect(values.length, 1);
+        expect(computation.get(), 4);
+        expect(values.length, 2);
+      });
     },
   );
 
-  group("Transforms", () {
+  group("Computation transform", () {
     test('emits values from the inner computable', () async {
       final computable = Computable(1);
       final computable2 = Computable(2);
@@ -295,6 +363,90 @@ void main() {
 
       expect(computation.get(), 6);
     });
+
+    test('Does not reschedule a computation when lazy', () async {
+      final computable = Computable(1);
+      final computable2 = Computable(2);
+
+      final List<num> values = [];
+
+      final intermediateComputation = computable.transform(
+        (input1) {
+          return computable2.map((input2) => input1 + input2);
+        },
+        lazy: true,
+      );
+      final computation =
+          intermediateComputation.map((value) => (values..add(value)).last);
+
+      await pause();
+
+      // The intermediate computation is lazy but the final computation is not, so the instantiation
+      // of the final computation will demand the transformed computation's value be immediately computed.
+      expect(values.length, 1);
+      expect(computation.get(), 3);
+
+      computable2.add(5);
+
+      await pause();
+
+      // For subsequent updates to dependencies of the intermediate computation, however, it will not immediately
+      // recompute until its value is accessed. This means that the final computation will also not be recomputed until that time.
+      expect(values.length, 1);
+      expect(computation.get(), 6);
+      expect(values.length, 2);
+    });
+
+    test(
+      'Is disposed when its dependencies are disposed',
+      () {
+        final computable = Computable(1);
+        final computable2 = Computable(2);
+        final computable3 = Computable(0, broadcast: true);
+
+        final computation = Computable.transform2(
+          computable,
+          computable2,
+          (input1, input2) {
+            computable3.add(input1 + input2);
+            return computable3;
+          },
+        );
+
+        // The computation transform is dependent on the inner computation made up of computable and computable2 as well
+        // as computable 3 returned by the computation.
+        expect(computation.inspect()['dependencies'].length, 2);
+        expect(computation.isClosed, false);
+
+        computable.add(2);
+
+        expect(computation.get(), 4);
+
+        // The transform's dependency count should remain the same, it should remain dependent on the inner computation of computable and computable2
+        // and have removed its old dependency on the inner computation's previous computable, replacing it with its new one.
+        expect(computation.inspect()['dependencies'].length, 2);
+
+        computable.dispose();
+
+        // Computable 1 is now closed, however the inner computation of computable and computable 2 remains open while computable2 remains open,
+        // so the dependency count remains the same.
+        expect(computation.inspect()['dependencies'].length, 2);
+        expect(computation.isClosed, false);
+
+        computable2.dispose();
+
+        // Once both computable1 and computable2 have been disposed, the transform's inner computation is closed, and it remains only dependent on
+        // the inner computation's latest returned computable, computable 3.
+        expect(computation.inspect()['dependencies'].length, 1);
+        expect(computation.isClosed, false);
+
+        computable3.dispose();
+
+        // Once computable3 is also closed, the transform should have no dependencies left and should have disposed itself as well.
+        expect(computation.inspect()['dependencies'].length, 0);
+        expect(computation.isClosed, true);
+      },
+    );
   });
 
   group('Subscriber', () {

@@ -5,30 +5,21 @@ part of 'computables.dart';
 class Computation<T> extends Computable<T> with Recomputable<T> {
   final T Function(List inputs) compute;
 
+  /// The list of computables that the computation was instantiated with.
+  final List<Computable> computables;
+
   Computation({
-    required List<Computable> computables,
+    required this.computables,
     required this.compute,
     super.broadcast = false,
     super.dedupe = false,
+    bool lazy = false,
   }) : super._() {
-    init(computables);
+    init(computables, lazy: lazy);
   }
 
   @override
   T _recompute() {
-    return compute(_deps.map((computable) => computable.get()).toList());
-  }
-
-  @override
-  dispose() {
-    for (final dep in _deps) {
-      if (!dep.broadcast) {
-        dep.dispose();
-      } else {
-        dep._dependents.remove(this);
-      }
-    }
-
-    super.dispose();
+    return compute(computables.map((computable) => computable.get()).toList());
   }
 }
