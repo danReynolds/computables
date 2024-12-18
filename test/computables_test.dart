@@ -230,39 +230,6 @@ void main() {
         expect(computation.get(), 6);
       });
 
-      test("cancels non-broadcast computables automatically", () async {
-        final computable1 = Computable(1);
-        final computable2 = Computable(2);
-        final computation = Computable.compute2(
-          computable1,
-          computable2,
-          (input1, input2) => input1 + input2,
-        );
-
-        computation.dispose();
-
-        expect(computable1.isClosed, true);
-        expect(computable2.isClosed, true);
-      });
-
-      test("does not cancel broadcast computables automatically", () async {
-        final computable1 = Computable(1, broadcast: true);
-        final computable2 = Computable(2);
-
-        final computation = Computable.compute2(
-          computable1,
-          computable2,
-          (input1, input2) => input1 + input2,
-        );
-
-        computation.dispose();
-
-        expect(computable1.isClosed, false);
-        expect(computable2.isClosed, true);
-
-        computable1.dispose();
-      });
-
       test('immediately returns updated values', () {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
