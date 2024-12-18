@@ -34,7 +34,7 @@ class Computable<T> {
     if (broadcast) {
       _controller = StreamController<T>.broadcast();
     } else {
-      _controller = StreamController<T>(onCancel: dispose);
+      _controller = StreamController<T>();
     }
 
     _stream = StreamFactory(() {
