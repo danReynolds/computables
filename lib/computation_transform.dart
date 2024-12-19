@@ -11,7 +11,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
     required Computable<T> Function(List inputs) transform,
     super.broadcast = false,
     super.dedupe = false,
-    bool lazy = false,
+    bool lazy = true,
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {

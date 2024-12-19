@@ -11,6 +11,7 @@ class Computable<T> {
   final Set<Recomputable> _dependents = {};
 
   late T _value;
+  late bool _hasValue;
 
   /// Whether the [Computable] can have more than one observable subscription. A single-subscription
   /// observable will allow one subscriber and will release its resources automatically when its listener cancels its subscription.
@@ -28,13 +29,15 @@ class Computable<T> {
     this.broadcast = false,
     this.dedupe = true,
     this.deepDirtyCheck = false,
-  });
+  }) : _hasValue = true;
 
   void _initController() {
     if (broadcast) {
       _controller = StreamController<T>.broadcast();
     } else {
-      _controller = StreamController<T>();
+      _controller = StreamController<T>(onCancel: () {
+        _controller!.close();
+      });
     }
 
     _stream = StreamFactory(() {
@@ -66,8 +69,8 @@ class Computable<T> {
   T add(T updatedValue) {
     assert(!isClosed, 'Cannot add value to a closed computable.');
 
-    if (isClosed || _value == updatedValue && dedupe) {
-      return _value;
+    if (isClosed || (_hasValue && get() == updatedValue && dedupe)) {
+      return get();
     }
 
     _value = updatedValue;
@@ -81,7 +84,7 @@ class Computable<T> {
       controller!.add(_value);
     }
 
-    return _value;
+    return get();
   }
 
   T update(T Function(T value) updateFn) {
@@ -165,7 +168,7 @@ class Computable<T> {
     Computable<S2> computable2,
     T Function(S1 input1, S2 input2) compute, {
     bool broadcast = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return Computation<T>(
       computables: [computable1, computable2],
@@ -181,7 +184,7 @@ class Computable<T> {
     Computable<S3> computable3,
     T Function(S1 input1, S2 input2, S3 input3) compute, {
     bool broadcast = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return Computation<T>(
       computables: [computable1, computable2, computable3],
@@ -203,7 +206,7 @@ class Computable<T> {
       S4 input4,
     ) compute, {
     bool broadcast = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return Computation<T>(
       computables: [computable1, computable2, computable3, computable4],
@@ -218,7 +221,7 @@ class Computable<T> {
     Computable<S2> computable2,
     Computable<T> Function(S1 input1, S2 input2) transform, {
     bool broadcast = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2],
@@ -234,7 +237,7 @@ class Computable<T> {
     Computable<S3> computable3,
     Computable<T> Function(S1 input1, S2 input2, S3 input3) transform, {
     bool broadcast = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3],
@@ -256,7 +259,7 @@ class Computable<T> {
       S4 input4,
     ) transform, {
     bool broadcast = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3, computable4],

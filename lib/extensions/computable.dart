@@ -5,7 +5,7 @@ extension ComputableExtensions<T> on Computable<T> {
     S Function(T value) map, {
     bool broadcast = false,
     bool dedupe = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return Computation(
       computables: [this],
@@ -20,7 +20,7 @@ extension ComputableExtensions<T> on Computable<T> {
     Computable<S> Function(T value) transform, {
     bool broadcast = false,
     bool dedupe = false,
-    bool lazy = false,
+    bool lazy = true,
   }) {
     return ComputationTransform(
       computables: [this],
