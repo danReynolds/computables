@@ -1,6 +1,17 @@
 part of computables;
 
 /// A mixin that implements the recomputable behavior used by a [Computation] and [ComputationTransform].
+///
+/// A recomputable can be either *active* or *inactive*.
+///
+/// Active:
+/// An active recomputable has subscribers, either client subscribers through the [stream] API, or
+/// internal computable subscribers that depend on it. An active computable immediately pushes down
+/// its dirty state to its subscribers and itself for recomputation.
+///
+/// Inactive:
+/// An inactive recomputable will mark itself as dirty but has no subscribers to notify and will therefore
+/// not schedule itself for recomputation.
 mixin Recomputable<T> on Computable<T> {
   /// A mutable dirty flag on the computable is used as an optimization so that its dependency
   /// tree does not need to be checked if the computable has been directly marked as dirty.
@@ -26,14 +37,29 @@ mixin Recomputable<T> on Computable<T> {
   _initController() {
     final controller = super._initController();
 
-    controller.onListen = _activate;
-    controller.onCancel = _deactivate;
+    controller.onListen = () {
+      if (_subscribers.isEmpty) {
+        for (final dep in _deps) {
+          dep._subscribe(this);
+        }
+      }
+    };
+    controller.onCancel = () {
+      for (final dep in _deps) {
+        dep._unsubscribe(this);
+      }
+    };
 
     return controller;
   }
 
   void _addDep(Computable dep) {
     _deps.add(dep);
+
+    if (isActive) {
+      dep._subscribe(this);
+    }
+
     if (dep.deepDirtyCheck) {
       _deepDirtyCheckDeps.add(dep);
     }
@@ -43,50 +69,47 @@ mixin Recomputable<T> on Computable<T> {
     _deps.remove(dep);
     _deepDirtyCheckDeps.remove(dep);
 
+    if (isActive) {
+      dep._unsubscribe(this);
+    }
+
     // If the recomputable has no remaining dependencies then it can be disposed as well.
     if (_deps.isEmpty) {
       dispose();
     }
   }
 
-  void _activate() {
+  @override
+  _subscribe(dep) {
     if (!isActive) {
       for (final dep in _deps) {
-        dep._addSubscriber(this);
+        dep._subscribe(this);
       }
     }
+
+    super._subscribe(dep);
   }
 
-  void _deactivate() {
+  @override
+  _unsubscribe(dep) {
+    super._unsubscribe(dep);
+
     if (isActive) {
       for (final dep in _deps) {
-        dep._removeSubscriber(this);
+        dep._unsubscribe(this);
       }
     }
-  }
-
-  @override
-  _addSubscriber(dep) {
-    _activate();
-    super._addSubscriber(dep);
-  }
-
-  @override
-  _removeSubscriber(dep) {
-    super._removeSubscriber(dep);
-    _deactivate();
   }
 
   @override
   get isDirty {
-    // If the computable is active, then its dependencies will have pushed the fact that they are dirty
-    // down to it and the flag can be used to determine if it is dirty.
-    if (isActive) {
-      return _isDirty || _deepDirtyCheckDeps.any((dep) => dep.isDirty);
+    if (_isDirty) {
+      return true;
     }
 
-    // If the computable is not active then the dirty state of its dependencies must be pulled.
-    return _deps.any((dep) => dep.isDirty);
+    return _isDirty ||
+        (isActive && _deepDirtyCheckDeps.any((dep) => dep.isDirty)) ||
+        _deps.any((dep) => dep.isDirty);
   }
 
   void _dirty(

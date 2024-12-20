@@ -73,15 +73,17 @@ class Computable<T> {
     return _controller?.hasListener ?? false;
   }
 
+  /// A computable is considered active if it has stream listeners or other computables that
+  /// are subscribed to it.
   bool get isActive {
     return hasListener || _subscribers.isNotEmpty;
   }
 
-  void _addSubscriber(Recomputable dep) {
+  void _subscribe(Recomputable dep) {
     _subscribers.add(dep);
   }
 
-  void _removeSubscriber(Recomputable dep) {
+  void _unsubscribe(Recomputable dep) {
     _subscribers.remove(dep);
   }
 
