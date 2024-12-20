@@ -13,9 +13,8 @@ class Computation<T> extends Computable<T> with Recomputable<T> {
     required this.compute,
     super.broadcast = false,
     super.dedupe = false,
-    bool lazy = true,
   }) : super._() {
-    init(computables, lazy: lazy);
+    init(computables);
   }
 
   @override

@@ -239,7 +239,6 @@ void main() {
           computable1,
           computable2,
           (input1, input2) => (values..add(input1 + input2)).last,
-          lazy: true,
         );
 
         await pause();
@@ -267,7 +266,6 @@ void main() {
           computable1,
           computable2,
           (input1, input2) => (values..add(input1 + input2)).last,
-          lazy: true,
         );
 
         computation.stream().listen(null);
@@ -293,7 +291,6 @@ void main() {
           computable1,
           computable2,
           (input1, input2) => (values..add(input1 + input2)).last,
-          lazy: false,
         );
 
         // An eager computable computes its first value on instantiation.
@@ -377,11 +374,9 @@ void main() {
         (input1) {
           return computable2.map((input2) => input1 + input2);
         },
-        lazy: true,
       );
       final computation = intermediateComputation.map(
         (value) => (values..add(value)).last,
-        lazy: true,
       );
 
       await pause();
@@ -409,11 +404,9 @@ void main() {
         (input1) {
           return computable2.map((input2) => input1 + input2);
         },
-        lazy: true,
       );
       final computation = intermediateComputation.map(
         (value) => (values..add(value)).last,
-        lazy: true,
       );
 
       final subscrption = computation.stream().listen(null);
