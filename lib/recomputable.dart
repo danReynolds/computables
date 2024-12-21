@@ -22,7 +22,7 @@ mixin Recomputable<T> on Computable<T> {
   /// Whether this computation is scheduled to perform an asynchronous recomputation.
   bool _isScheduled = false;
 
-  void init(List<Computable> dependencies) {
+  void _initDeps(List<Computable> dependencies) {
     for (final dependency in dependencies) {
       _addDep(dependency);
     }

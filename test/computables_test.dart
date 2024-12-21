@@ -114,6 +114,32 @@ void main() {
       computable.add(2);
       computable.add(3);
     });
+
+    test(
+      'A non-broadcast computable is disposed when its subscription is canceled',
+      () {
+        final computable = Computable(1);
+
+        final subscription = computable.stream().listen(null);
+
+        expect(computable.isClosed, false);
+        subscription.cancel();
+        expect(computable.isClosed, true);
+      },
+    );
+
+    test(
+      'A broadcast computable is not disposed when a subscription is canceled',
+      () {
+        final computable = Computable(1, broadcast: true);
+
+        final subscription = computable.stream().listen(null);
+
+        expect(computable.isClosed, false);
+        subscription.cancel();
+        expect(computable.isClosed, false);
+      },
+    );
   });
 
   group(
