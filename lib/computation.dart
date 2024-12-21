@@ -14,7 +14,7 @@ class Computation<T> extends Computable<T> with Recomputable<T> {
     super.broadcast = false,
     super.dedupe = false,
   }) : super._() {
-    init(computables);
+    _initDeps(computables);
   }
 
   @override

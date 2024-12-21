@@ -5,12 +5,13 @@ part of computables;
 /// A recomputable can be either *active* or *inactive*.
 ///
 /// Active:
-/// An active recomputable is one that either has client stream listeners or one or dependent computables watching it.
-/// Active computables **push** updates and automatically schedule a recomputation when they become dirty.
+/// An active recomputable is one that either has client stream listeners or dependent computables watching it.
+/// Active computables **push** updates automatically and schedule a recomputation when they become dirty.
 ///
 /// Inactive:
-/// An inactive recomputable mark itself as dirty but since it it has no listeners or dependents, it does not automatically
-/// recompute its value. Instead, it lazily recomputes its value when it is accessed or becomes active.
+/// An inactive recomputable does not recompute automatically. Instead, it lazily recomputes its value when it is accessed.
+///
+/// All computables are inactive by default until a stream listener or watcher is added.
 mixin Recomputable<T> on Computable<T> {
   /// The dependencies of this computable.
   final Set<Computable> _deps = {};

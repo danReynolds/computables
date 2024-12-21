@@ -14,7 +14,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {
-    init([_computation]);
+    _initDeps([_computation]);
   }
 
   @override
