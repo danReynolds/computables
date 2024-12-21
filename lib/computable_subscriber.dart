@@ -19,11 +19,11 @@ class ComputableSubscriber<T> extends Computable<T> {
 
   @override
   dispose() {
-    super.dispose();
-
     for (var subscription in _subscriptions) {
       subscription.cancel();
     }
+
+    super.dispose();
   }
 
   /// Subscribes the subscriber [Computable] to the provided source [Computable].
