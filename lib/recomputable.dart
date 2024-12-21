@@ -5,22 +5,25 @@ part of computables;
 /// A recomputable can be either *active* or *inactive*.
 ///
 /// Active:
-/// An active recomputable is one that currently has listeners. Listeners can either be client listeners through the [stream] API, or
-/// internal computable listeners that depend on it. On update, an active computable schedules its listeners
-///
+/// An active recomputable is one that either has client stream listeners or one or dependent computables watching it.
+/// Active computables **push** updates and automatically schedule a recomputation when they become dirty.
 ///
 /// Inactive:
-/// An inactive recomputable will mark itself as dirty but has no subscribers to notify and will therefore
-/// not schedule itself for recomputation.
+/// An inactive recomputable mark itself as dirty but since it it has no listeners or dependents, it does not automatically
+/// recompute its value. Instead, it lazily recomputes its value when it is accessed or becomes active.
 mixin Recomputable<T> on Computable<T> {
+  /// The dependencies of this computable.
   final Set<Computable> _deps = {};
+
+  /// A cache of the values of the dependencies of this computable from this computable's most recent recomputation.
   final Map<Computable, dynamic> _depsCache = {};
 
+  /// Whether this computation is scheduled to perform an asynchronous recomputation.
   bool _isScheduled = false;
 
-  void init(List<Computable> deps) {
-    for (final dep in deps) {
-      _addDep(dep);
+  void init(List<Computable> dependencies) {
+    for (final dependency in dependencies) {
+      _addDep(dependency);
     }
   }
 
@@ -29,16 +32,16 @@ mixin Recomputable<T> on Computable<T> {
     final controller = super._initController();
 
     controller.onListen = () {
-      if (_subscribers.isEmpty) {
-        for (final dep in _depsCache.keys) {
-          dep._addSubscriber(this);
+      if (_watchers.isEmpty) {
+        for (final dep in _deps) {
+          dep._addWatcher(this);
         }
       }
     };
     controller.onCancel = () {
-      if (_subscribers.isEmpty) {
-        for (final dep in _depsCache.keys) {
-          dep._removeSubscriber(this);
+      if (_watchers.isEmpty) {
+        for (final dep in _deps) {
+          dep._removeWatcher(this);
         }
       }
     };
@@ -50,7 +53,7 @@ mixin Recomputable<T> on Computable<T> {
     _deps.add(dep);
 
     if (isActive) {
-      dep._addSubscriber(this);
+      dep._addWatcher(this);
     }
   }
 
@@ -59,33 +62,28 @@ mixin Recomputable<T> on Computable<T> {
     _depsCache.remove(dep);
 
     if (isActive) {
-      dep._removeSubscriber(this);
-    }
-
-    // If the recomputable has no remaining dependencies then it can be disposed as well.
-    if (_depsCache.isEmpty) {
-      dispose();
+      dep._removeWatcher(this);
     }
   }
 
   @override
-  _addSubscriber(dep) {
+  _addWatcher(watcher) {
     if (!isActive) {
-      for (final dep in _depsCache.keys) {
-        dep._addSubscriber(this);
+      for (final dependency in _deps) {
+        dependency._addWatcher(this);
       }
     }
 
-    super._addSubscriber(dep);
+    super._addWatcher(watcher);
   }
 
   @override
-  _removeSubscriber(dep) {
-    super._removeSubscriber(dep);
+  _removeWatcher(watcher) {
+    super._removeWatcher(watcher);
 
     if (!isActive) {
-      for (final dep in _depsCache.keys) {
-        dep._removeSubscriber(this);
+      for (final dep in _deps) {
+        dep._removeWatcher(this);
       }
     }
   }
@@ -97,19 +95,22 @@ mixin Recomputable<T> on Computable<T> {
     );
   }
 
-  void _notifyListeners() {
+  // Schedules an asynchronous broadcast of its recomputed value to its stream listeners
+  // and computable watchers. Scheduling this recomputation asynchronously has a couple advantages:
+  //
+  // 1. It batches together synchronous updates to multiple dependencies into a single event.
+  // 2. It frees up the main isolate to process other pending events before having to perform what could
+  //    be a heavy recomputation.
+  void _scheduleBroadcast() {
     if (_isScheduled) {
       return;
     }
 
     _isScheduled = true;
 
-    // Listeners are notified asynchronously. This has a couple advantages:
-    //
-    // 1. It batches together synchronous updates to multiple dependencies into a single event.
-    // 2. It frees up the main isolate to process other pending events before having to perform what could
-    //    be a heavy recomputation.
     Future.delayed(Duration.zero, () {
+      // Rather than call [_cachedRecompute] directly, [get] is used to determine if the computable still needs to be recomputed,
+      // since it may already have performed the recomputation after it was scheduled.
       add(get());
       _isScheduled = false;
     });
@@ -118,33 +119,26 @@ mixin Recomputable<T> on Computable<T> {
   @override
   get() {
     if (isDirty) {
-      // If it is active, it schedules a notification to its listeners.
+      // If it is active, it schedules a an asynchronous broadcast of its recomptued value.
       if (isActive) {
-        _notifyListeners();
+        _scheduleBroadcast();
       }
 
-      // If accessed while dirty, the computable must immediately recompute its value.
-      _cachedRecompute();
+      // Cache the latest values of the computable's dependencies.
+      for (final dep in _deps) {
+        _depsCache[dep] = dep.get();
+      }
+
+      // Since the computable was accessed while dirty, it must immediately recompute its value.
+      _value = _recompute();
     }
 
     return _value;
   }
 
-  @override
-  Map inspect() {
-    return {
-      ...super.inspect(),
-      "dependencies": _depsCache,
-    };
+  int get depLength {
+    return _deps.length;
   }
 
   T _recompute();
-
-  T _cachedRecompute() {
-    for (final dep in _depsCache.keys) {
-      _depsCache[dep] = dep.get();
-    }
-
-    return _value = _recompute();
-  }
 }

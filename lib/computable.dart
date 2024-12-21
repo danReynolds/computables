@@ -9,27 +9,22 @@ class Computable<T> {
   bool _isClosed = false;
   bool _isFirstEvent = true;
 
-  final Set<Recomputable> _subscribers = {};
+  /// The set of computables actively watching this computable.
+  final Set<Recomputable> _watchers = {};
 
   late T _value;
   T? _controllerValue;
 
-  /// Whether the [Computable] can have more than one observable subscription. A single-subscription
-  /// observable will allow one subscriber and will release its resources automatically when its listener cancels its subscription.
-  /// A broadcast observable supports multiple subscribers and must have its resources released manually by calling [dispose].
+  /// Whether the computable can have more than one stream listener using [StreamController.broadcast].
   final bool broadcast;
 
   /// Whether duplicate values should be discarded and not re-emitted to subscribers.
   final bool dedupe;
 
-  /// Whether the [Computable] must always be re-evaluated when checking if it is dirty.
-  bool deepDirtyCheck;
-
   Computable(
     this._value, {
     this.broadcast = false,
     this.dedupe = true,
-    this.deepDirtyCheck = false,
   });
 
   StreamController<T> _initController() {
@@ -51,15 +46,16 @@ class Computable<T> {
   Computable._({
     this.broadcast = false,
     this.dedupe = true,
-    this.deepDirtyCheck = false,
   });
 
+  /// Disposes the computable, making it unable to add new values and closing its [StreamController].
   void dispose() {
     _isClosed = true;
     _controller?.close();
 
-    for (final dep in _subscribers) {
-      dep._removeDep(this);
+    // When this computable is disposed, each of its active watchers should remove it as a dependency.
+    for (final watcher in _watchers.toList()) {
+      watcher._removeDep(this);
     }
   }
 
@@ -75,18 +71,18 @@ class Computable<T> {
     return _controller?.hasListener ?? false;
   }
 
-  /// A computable is considered active if it has stream listeners or other computables that
-  /// are subscribed to it.
+  /// A computable is considered active if it either has one or more stream listeners or
+  /// dependent computables watching it.
   bool get isActive {
-    return hasListener || _subscribers.isNotEmpty;
+    return hasListener || _watchers.isNotEmpty;
   }
 
-  void _addSubscriber(Recomputable dep) {
-    _subscribers.add(dep);
+  void _addWatcher(Recomputable watcher) {
+    _watchers.add(watcher);
   }
 
-  void _removeSubscriber(Recomputable dep) {
-    _subscribers.remove(dep);
+  void _removeWatcher(Recomputable watcher) {
+    _watchers.remove(watcher);
   }
 
   T add(T updatedValue) {
@@ -107,8 +103,9 @@ class Computable<T> {
       controller!.add(_value);
     }
 
-    for (final subscriber in _subscribers) {
-      subscriber._notifyListeners();
+    /// Schedule all of its watchers to recompute.
+    for (final watcher in _watchers) {
+      watcher._scheduleBroadcast();
     }
 
     return _value;
@@ -130,13 +127,6 @@ class Computable<T> {
       _initController();
     }
     return _stream;
-  }
-
-  Map inspect() {
-    return {
-      "value": get(),
-      "subscribers": _subscribers,
-    };
   }
 
   static Computable<S> fromFuture<S>(

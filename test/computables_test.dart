@@ -114,36 +114,12 @@ void main() {
       computable.add(2);
       computable.add(3);
     });
-
-    group(
-      "dispose",
-      () {
-        test(
-          'Disposes dependents',
-          () {
-            final computable = Computable(1);
-
-            final computation = computable.map((value) => value + 1);
-
-            expect(computation.inspect()['dependencies'].length, 1);
-
-            computable.dispose();
-
-            // When a computable is disposed, it should remove itself as a dependency from all of its
-            // downstream dependents. If that dependent has no other dependencies, then it should cascade
-            // and dispose itself.
-            expect(computation.inspect()['dependencies'].length, 0);
-            expect(computation.isClosed, true);
-          },
-        );
-      },
-    );
   });
 
   group(
     'Computation',
     () {
-      test('computes multiple inputs', () async {
+      test('Computes multiple inputs', () async {
         final computable1 = Computable(0);
         final computable2 = Computable(0);
 
@@ -176,7 +152,7 @@ void main() {
         );
       });
 
-      test('does not broadcast intermediate values from the same task',
+      test('Does not broadcast intermediate values from the same task',
           () async {
         final computable1 = Computable(0);
         final computable2 = Computable(0);
@@ -198,7 +174,7 @@ void main() {
         expect(await future, [0, 2]);
       });
 
-      test('recomputes immediately if accessed synchronously', () {
+      test('Recomputes immediately if accessed synchronously', () {
         final computable = Computable(1);
 
         final computation = computable.map((value) => value + 1);
@@ -213,22 +189,7 @@ void main() {
         expect(computation.get(), 6);
       });
 
-      test('immediately returns updated values', () {
-        final computable1 = Computable(1);
-        final computable2 = Computable(2);
-
-        final computation = Computable.compute2(
-          computable1,
-          computable2,
-          (input1, input2) => input1 + input2,
-        );
-
-        expect(computation.get(), 3);
-        computable1.add(2);
-        expect(computation.get(), 4);
-      });
-
-      test('Does not schedule a recomputation when inactive', () async {
+      test('Does not automatically recompute when inactive', () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
 
@@ -255,7 +216,7 @@ void main() {
         expect(values.length, 2);
       });
 
-      test('Does schedule a recomputation when active', () async {
+      test('Does automatically recompute when active', () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
 
@@ -279,6 +240,110 @@ void main() {
 
         computation.dispose();
       });
+
+      test(
+        'Stops watching its dependencies when it becomes inactive',
+        () async {
+          final computable1 = Computable(1);
+          final computable2 = Computable(2);
+
+          final List<num> values = [];
+
+          final computation = Computable.compute2(
+            computable1,
+            computable2,
+            (input1, input2) => (values..add(input1 + input2)).last,
+          );
+
+          expect(computation.isActive, false);
+
+          final subscription = computation.stream().listen(null);
+
+          expect(computation.isActive, true);
+          expect(values.length, 1);
+
+          computable1.add(2);
+
+          await pause();
+
+          expect(values.length, 2);
+
+          subscription.cancel();
+
+          // Now that the listener to the computable's stream has been canceled, the computation is no
+          // longer active and has unsubscribed from automatically receiving updates from its dependencies.
+          expect(computation.isActive, false);
+
+          computable1.add(3);
+
+          await pause();
+
+          expect(values.length, 2);
+          expect(computation.get(), 5);
+          expect(values.length, 3);
+
+          final downstreamComputation = computation.map((value) => value + 1);
+
+          expect(computation.isActive, false);
+
+          final downstreamSubscription =
+              downstreamComputation.stream().listen(null);
+
+          // Now that the computation has a downstream watcher, it should become active again.
+          expect(computation.isActive, true);
+
+          computable1.add(4);
+
+          await pause();
+
+          expect(values.length, 4);
+          expect(computation.get(), 6);
+          expect(values.length, 4);
+
+          downstreamSubscription.cancel();
+
+          // Once the downstream computation is canceled, it will stop watching the computation
+          // and the computation itself will become inactive again.
+          expect(computation.isActive, false);
+
+          computable1.add(5);
+
+          await pause();
+
+          expect(values.length, 4);
+          expect(computation.get(), 7);
+          expect(values.length, 5);
+        },
+      );
+
+      test(
+        'Removes active dependencies when they are disposed',
+        () {
+          final computable1 = Computable(1);
+          final computable2 = Computable(2);
+
+          final computation = Computable.compute2(
+            computable1,
+            computable2,
+            (input1, input2) => input1 + input2,
+          ) as Recomputable;
+
+          computation.stream().listen(null);
+
+          // The computation has two dependencies: computable1 and computable2.
+          expect(computation.depLength, 2);
+          expect(computation.isClosed, false);
+
+          computable1.add(2);
+
+          expect(computation.get(), 4);
+
+          // The computation should remove its dependency on computable1 when it is disposed.
+          computable1.dispose();
+
+          expect(computation.depLength, 1);
+        },
+      );
     },
   );
 
@@ -321,7 +386,7 @@ void main() {
       expect(computation.get(), 6);
     });
 
-    test('returns updated values from a dirty inner computable', () {
+    test('Recomputes when values are added to the inner computable', () {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
@@ -338,26 +403,28 @@ void main() {
       expect(computation.get(), 6);
     });
 
-    test('Does not reschedule a computation when lazy without a listener',
-        () async {
+    test('Does not automatically recompute when inactive', () async {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
       final List<num> values = [];
 
-      final intermediateComputation = computable.transform(
+      final computation = computable.transform(
         (input1) {
           return computable2.map((input2) => input1 + input2);
         },
       );
-      final computation = intermediateComputation.map(
+      final downstreamComputation = computation.map(
         (value) => (values..add(value)).last,
       );
+
+      expect(computation.isActive, false);
+      expect(downstreamComputation.isActive, false);
 
       await pause();
 
       expect(values.length, 0);
-      expect(computation.get(), 3);
+      expect(downstreamComputation.get(), 3);
       expect(values.length, 1);
 
       computable2.add(5);
@@ -365,31 +432,37 @@ void main() {
       await pause();
 
       expect(values.length, 1);
-      expect(computation.get(), 6);
+      expect(downstreamComputation.get(), 6);
       expect(values.length, 2);
     });
 
-    test('Does reschedule a computation when lazy with a listener', () async {
+    test('Does automatically recompute when active', () async {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
       final List<num> values = [];
 
-      final intermediateComputation = computable.transform(
+      final computation = computable.transform(
         (input1) {
           return computable2.map((input2) => input1 + input2);
         },
       );
-      final computation = intermediateComputation.map(
+      final downstreamComputation = computation.map(
         (value) => (values..add(value)).last,
       );
 
-      final subscrption = computation.stream().listen(null);
+      expect(computation.isActive, false);
+      expect(downstreamComputation.isActive, false);
+
+      final subscription = downstreamComputation.stream().listen(null);
+
+      expect(computation.isActive, true);
+      expect(downstreamComputation.isActive, true);
 
       await pause();
 
       expect(values.length, 1);
-      expect(computation.get(), 3);
+      expect(downstreamComputation.get(), 3);
       expect(values.length, 1);
 
       computable2.add(5);
@@ -397,14 +470,25 @@ void main() {
       await pause();
 
       expect(values.length, 2);
-      expect(computation.get(), 6);
+      expect(downstreamComputation.get(), 6);
       expect(values.length, 2);
 
-      subscrption.cancel();
+      subscription.cancel();
+
+      expect(downstreamComputation.isActive, false);
+      expect(computation.isActive, false);
+
+      computable2.add(6);
+
+      await pause();
+
+      expect(values.length, 2);
+      expect(downstreamComputation.get(), 7);
+      expect(values.length, 3);
     });
 
     test(
-      'Is disposed when its dependencies are disposed',
+      'Maintains the correct dependency count when the inner computable emits new values',
       () {
         final computable = Computable(1);
         final computable2 = Computable(2);
@@ -417,41 +501,21 @@ void main() {
             computable3.add(input1 + input2);
             return computable3;
           },
-        );
+        ) as Recomputable;
 
-        // The computation transform is dependent on the inner computation made up of computable and computable2 as well
-        // as computable 3 returned by the computation.
-        expect(computation.inspect()['dependencies'].length, 2);
+        // The computation transform has two dependencies: the inner computation made up of computable and computable2 as well
+        // as its output computable, computable3.
+        expect(computation.get(), 3);
+        expect(computation.depLength, 2);
         expect(computation.isClosed, false);
 
         computable.add(2);
 
         expect(computation.get(), 4);
 
-        // The transform's dependency count should remain the same, it should remain dependent on the inner computation of computable and computable2
-        // and have replaced its old dependency on the inner computation's previous output computable with the new one. Note that in this test, it's the same
-        // every time, computable3.
-        expect(computation.inspect()['dependencies'].length, 2);
-
-        computable.dispose();
-
-        // Computable 1 is now closed, however the inner computation of computable and computable 2 remains open while computable2 remains open,
-        // so the dependency count remains the same.
-        expect(computation.inspect()['dependencies'].length, 2);
-        expect(computation.isClosed, false);
-
-        computable2.dispose();
-
-        // Once both computable1 and computable2 have been disposed, the transform's inner computation is closed, and it remains only dependent on
-        // the inner computation's latest returned computable, computable 3.
-        expect(computation.inspect()['dependencies'].length, 1);
-        expect(computation.isClosed, false);
-
-        computable3.dispose();
-
-        // Once computable3 is also closed, the transform should have no dependencies left and should dispose itself as well.
-        expect(computation.inspect()['dependencies'].length, 0);
-        expect(computation.isClosed, true);
+        // The transform's dependency count should remain the same when its inner computable emits a new value. It should remain
+        // dependent on the inner computation and have replaced its old dependency on the inner computation's previous output computable with the new one.
+        expect(computation.depLength, 2);
       },
     );
   });
