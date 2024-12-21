@@ -228,8 +228,7 @@ void main() {
         expect(computation.get(), 4);
       });
 
-      test('Does not schedule a recomputation when lazy without a listener',
-          () async {
+      test('Does not schedule a recomputation when inactive', () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
 
@@ -256,7 +255,7 @@ void main() {
         expect(values.length, 2);
       });
 
-      test('Does schedule a recomputation when lazy with a listener', () async {
+      test('Does schedule a recomputation when active', () async {
         final computable1 = Computable(1);
         final computable2 = Computable(2);
 
@@ -279,30 +278,6 @@ void main() {
         expect(values.length, 2);
 
         computation.dispose();
-      });
-
-      test('Does schedule a recomputation when eager', () async {
-        final computable1 = Computable(1);
-        final computable2 = Computable(2);
-
-        final List<num> values = [];
-
-        Computable.compute2(
-          computable1,
-          computable2,
-          (input1, input2) => (values..add(input1 + input2)).last,
-        );
-
-        // An eager computable computes its first value on instantiation.
-        expect(values.length, 1);
-
-        computable1.add(2);
-
-        await pause();
-
-        // Subsequent updates to an eager computable are recomputed automatically asynchronously
-        // without requiring pulling the value without needing to access it through [get] or [stream].
-        expect(values.length, 2);
       });
     },
   );

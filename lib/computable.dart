@@ -79,11 +79,11 @@ class Computable<T> {
     return hasListener || _subscribers.isNotEmpty;
   }
 
-  void _subscribe(Recomputable dep) {
+  void _addSubscriber(Recomputable dep) {
     _subscribers.add(dep);
   }
 
-  void _unsubscribe(Recomputable dep) {
+  void _removeSubscriber(Recomputable dep) {
     _subscribers.remove(dep);
   }
 

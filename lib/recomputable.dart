@@ -6,8 +6,8 @@ part of computables;
 ///
 /// Active:
 /// An active recomputable has subscribers, either client subscribers through the [stream] API, or
-/// internal computable subscribers that depend on it. An active computable immediately pushes down
-/// its dirty state to its subscribers and itself for recomputation.
+/// internal computable subscribers that depend on it. On update, an active computable immediately pushes down
+/// its dirty state to its subscribers and schedules itself for recomputation.
 ///
 /// Inactive:
 /// An inactive recomputable will mark itself as dirty but has no subscribers to notify and will therefore
@@ -15,12 +15,12 @@ part of computables;
 mixin Recomputable<T> on Computable<T> {
   /// A mutable dirty flag on the computable is used as an optimization so that its dependency
   /// tree does not need to be checked if the computable has been directly marked as dirty.
-  bool _isDirty = true;
+  bool _isDirty = false;
 
   /// Whether the recomputable is scheduled for recomputation.
   bool _isScheduled = false;
 
-  final Set<Computable> _deps = {};
+  final Map<Computable, dynamic> _depsCache = {};
 
   T? _pendingValue;
 
@@ -39,14 +39,14 @@ mixin Recomputable<T> on Computable<T> {
 
     controller.onListen = () {
       if (_subscribers.isEmpty) {
-        for (final dep in _deps) {
-          dep._subscribe(this);
+        for (final dep in _depsCache.keys) {
+          dep._addSubscriber(this);
         }
       }
     };
     controller.onCancel = () {
-      for (final dep in _deps) {
-        dep._unsubscribe(this);
+      for (final dep in _depsCache.keys) {
+        dep._removeSubscriber(this);
       }
     };
 
@@ -54,10 +54,12 @@ mixin Recomputable<T> on Computable<T> {
   }
 
   void _addDep(Computable dep) {
-    _deps.add(dep);
+    _isDirty = true;
+
+    _depsCache[dep] = null;
 
     if (isActive) {
-      dep._subscribe(this);
+      dep._addSubscriber(this);
     }
 
     if (dep.deepDirtyCheck) {
@@ -66,50 +68,48 @@ mixin Recomputable<T> on Computable<T> {
   }
 
   void _removeDep(Computable dep) {
-    _deps.remove(dep);
+    _isDirty = true;
+
+    _depsCache.remove(dep);
     _deepDirtyCheckDeps.remove(dep);
 
     if (isActive) {
-      dep._unsubscribe(this);
+      dep._removeSubscriber(this);
     }
 
     // If the recomputable has no remaining dependencies then it can be disposed as well.
-    if (_deps.isEmpty) {
+    if (_depsCache.isEmpty) {
       dispose();
     }
   }
 
   @override
-  _subscribe(dep) {
+  _addSubscriber(dep) {
     if (!isActive) {
-      for (final dep in _deps) {
-        dep._subscribe(this);
+      for (final dep in _depsCache.keys) {
+        dep._addSubscriber(this);
       }
     }
 
-    super._subscribe(dep);
+    super._addSubscriber(dep);
   }
 
   @override
-  _unsubscribe(dep) {
-    super._unsubscribe(dep);
+  _removeSubscriber(dep) {
+    super._removeSubscriber(dep);
 
     if (isActive) {
-      for (final dep in _deps) {
-        dep._unsubscribe(this);
+      for (final dep in _depsCache.keys) {
+        dep._removeSubscriber(this);
       }
     }
   }
 
   @override
   get isDirty {
-    if (_isDirty) {
-      return true;
-    }
-
     return _isDirty ||
         (isActive && _deepDirtyCheckDeps.any((dep) => dep.isDirty)) ||
-        _deps.any((dep) => dep.isDirty);
+        _depsCache.keys.any((dep) => dep.get() != _depsCache[dep]);
   }
 
   void _dirty(
@@ -130,9 +130,9 @@ mixin Recomputable<T> on Computable<T> {
         // in which case if it has not been re-dirtied, the cached pending value can be used instead of recomputing.
         if (isDirty) {
           _isDirty = false;
-          add(_recompute());
+          add(_cachedRecompute());
         } else {
-          add(_pendingValue ?? _recompute());
+          add(_pendingValue ?? _cachedRecompute());
         }
         _pendingValue = null;
         _isScheduled = false;
@@ -162,9 +162,9 @@ mixin Recomputable<T> on Computable<T> {
       if (_isScheduled) {
         // The recomputed value is cached so that it does not need to be recomputed if it has not been re-marked
         // as dirty when it asynchronously runs its recomputation.
-        _pendingValue = _recompute();
+        _pendingValue = _cachedRecompute();
       } else {
-        _value = _recompute();
+        _value = _cachedRecompute();
       }
     }
 
@@ -175,9 +175,17 @@ mixin Recomputable<T> on Computable<T> {
   Map inspect() {
     return {
       ...super.inspect(),
-      "dependencies": _deps,
+      "dependencies": _depsCache,
     };
   }
 
   T _recompute();
+
+  T _cachedRecompute() {
+    for (final dep in _depsCache.keys) {
+      _depsCache[dep] = dep.get();
+    }
+
+    return _recompute();
+  }
 }
