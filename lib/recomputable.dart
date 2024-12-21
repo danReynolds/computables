@@ -97,16 +97,16 @@ mixin Recomputable<T> on Computable<T> {
     );
   }
 
-  void _scheduleRecompute() {
+  void _notifyListeners() {
     if (_isScheduled) {
       return;
     }
 
     _isScheduled = true;
 
-    // A dirty recomputable is scheduled for recomputation asynchronously. This has a couple advantages:
+    // Listeners are notified asynchronously. This has a couple advantages:
     //
-    // 1. It batches together synchronous updates to multiple dependencies into a single recomputation.
+    // 1. It batches together synchronous updates to multiple dependencies into a single event.
     // 2. It frees up the main isolate to process other pending events before having to perform what could
     //    be a heavy recomputation.
     Future.delayed(Duration.zero, () {
@@ -118,9 +118,9 @@ mixin Recomputable<T> on Computable<T> {
   @override
   get() {
     if (isDirty) {
-      // If it is active, it schedules a recomputation to notify its subscribers.
+      // If it is active, it schedules a notification to its listeners.
       if (isActive) {
-        _scheduleRecompute();
+        _notifyListeners();
       }
 
       // If accessed while dirty, the computable must immediately recompute its value.

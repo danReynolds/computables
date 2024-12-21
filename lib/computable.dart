@@ -7,7 +7,7 @@ class Computable<T> {
   late StreamFactory<T> _stream;
 
   bool _isClosed = false;
-  bool _isFirstEvent = false;
+  bool _isFirstEvent = true;
 
   final Set<Recomputable> _subscribers = {};
 
@@ -108,7 +108,7 @@ class Computable<T> {
     }
 
     for (final subscriber in _subscribers) {
-      subscriber._scheduleRecompute();
+      subscriber._notifyListeners();
     }
 
     return _value;
