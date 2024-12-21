@@ -7,10 +7,12 @@ class Computable<T> {
   late StreamFactory<T> _stream;
 
   bool _isClosed = false;
+  bool _isFirstEvent = false;
 
   final Set<Recomputable> _subscribers = {};
 
   late T _value;
+  T? _controllerValue;
 
   /// Whether the [Computable] can have more than one observable subscription. A single-subscription
   /// observable will allow one subscriber and will release its resources automatically when its listener cancels its subscription.
@@ -90,22 +92,26 @@ class Computable<T> {
   T add(T updatedValue) {
     assert(!isClosed, 'Cannot add value to a closed computable.');
 
-    if (isClosed || (get() == updatedValue && dedupe)) {
-      return get();
-    }
-
     _value = updatedValue;
 
-    for (final subscriber in _subscribers) {
-      subscriber._dirty(true);
+    // Check whether the event should be added to the controller.
+    if (isClosed || (!_isFirstEvent && _value == _controllerValue && dedupe)) {
+      return _value;
     }
+
+    _controllerValue = _value;
+    _isFirstEvent = false;
 
     final controller = _controller;
     if (hasListener) {
       controller!.add(_value);
     }
 
-    return get();
+    for (final subscriber in _subscribers) {
+      subscriber._scheduleRecompute();
+    }
+
+    return _value;
   }
 
   T update(T Function(T value) updateFn) {
