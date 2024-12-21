@@ -45,8 +45,10 @@ mixin Recomputable<T> on Computable<T> {
       }
     };
     controller.onCancel = () {
-      for (final dep in _depsCache.keys) {
-        dep._removeSubscriber(this);
+      if (_subscribers.isEmpty) {
+        for (final dep in _depsCache.keys) {
+          dep._removeSubscriber(this);
+        }
       }
     };
 
@@ -98,7 +100,7 @@ mixin Recomputable<T> on Computable<T> {
   _removeSubscriber(dep) {
     super._removeSubscriber(dep);
 
-    if (isActive) {
+    if (!isActive) {
       for (final dep in _depsCache.keys) {
         dep._removeSubscriber(this);
       }
