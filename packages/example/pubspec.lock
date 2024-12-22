@@ -44,7 +44,7 @@ packages:
   computables:
     dependency: "direct overridden"
     description:
-      path: ".."
+      path: "../computables"
       relative: true
     source: path
     version: "5.0.0"
