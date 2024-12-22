@@ -9,8 +9,8 @@ class Computable<T> {
   bool _isClosed = false;
   bool _isFirstEvent = true;
 
-  /// The set of computables actively watching this computable.
-  final Set<Recomputable> _watchers = {};
+  /// The set of computable depencies observing changes to this computable.
+  final Set<Recomputable> _observers = {};
 
   late T _value;
   T? _controllerValue;
@@ -53,9 +53,9 @@ class Computable<T> {
     _isClosed = true;
     _controller?.close();
 
-    // When this computable is disposed, each of its active watchers should remove it as a dependency.
-    for (final watcher in _watchers.toList()) {
-      watcher._removeDep(this);
+    // When this computable is disposed, each of its active observers should remove it as a dependency.
+    for (final observer in _observers.toList()) {
+      observer._removeDep(this);
     }
   }
 
@@ -72,17 +72,17 @@ class Computable<T> {
   }
 
   /// A computable is considered active if it either has one or more stream listeners or
-  /// dependent computables watching it.
+  /// dependent computables observing it.
   bool get isActive {
-    return hasListener || _watchers.isNotEmpty;
+    return hasListener || _observers.isNotEmpty;
   }
 
-  void _addWatcher(Recomputable watcher) {
-    _watchers.add(watcher);
+  void _addObserver(Recomputable obs) {
+    _observers.add(obs);
   }
 
-  void _removeWatcher(Recomputable watcher) {
-    _watchers.remove(watcher);
+  void _removeObserver(Recomputable obs) {
+    _observers.remove(obs);
   }
 
   T add(T updatedValue) {
@@ -103,9 +103,9 @@ class Computable<T> {
       controller!.add(_value);
     }
 
-    /// Schedule all of its watchers to recompute.
-    for (final watcher in _watchers) {
-      watcher._scheduleBroadcast();
+    /// Schedule all of its observers to recompute.
+    for (final observer in _observers) {
+      observer._scheduleBroadcast();
     }
 
     return _value;

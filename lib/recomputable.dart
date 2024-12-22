@@ -5,13 +5,13 @@ part of computables;
 /// A recomputable can be either *active* or *inactive*.
 ///
 /// Active:
-/// An active recomputable is one that either has client stream listeners or dependent computables watching it.
+/// An active recomputable is one that either has client stream listeners or dependent computables observing its changes.
 /// Active computables **push** updates automatically and schedule a recomputation when they become dirty.
 ///
 /// Inactive:
 /// An inactive recomputable does not recompute automatically. Instead, it lazily recomputes its value when it is accessed.
 ///
-/// All computables are inactive by default until a stream listener or watcher is added.
+/// All computables are inactive by default until a stream listener or computable observer is added.
 mixin Recomputable<T> on Computable<T> {
   /// The dependencies of this computable.
   final Set<Computable> _deps = {};
@@ -33,16 +33,16 @@ mixin Recomputable<T> on Computable<T> {
     final controller = super._initController();
 
     controller.onListen = () {
-      if (_watchers.isEmpty) {
+      if (_observers.isEmpty) {
         for (final dep in _deps) {
-          dep._addWatcher(this);
+          dep._addObserver(this);
         }
       }
     };
     controller.onCancel = () {
-      if (_watchers.isEmpty) {
+      if (_observers.isEmpty) {
         for (final dep in _deps) {
-          dep._removeWatcher(this);
+          dep._removeObserver(this);
         }
       }
     };
@@ -54,7 +54,7 @@ mixin Recomputable<T> on Computable<T> {
     _deps.add(dep);
 
     if (isActive) {
-      dep._addWatcher(this);
+      dep._addObserver(this);
     }
   }
 
@@ -63,41 +63,40 @@ mixin Recomputable<T> on Computable<T> {
     _depsCache.remove(dep);
 
     if (isActive) {
-      dep._removeWatcher(this);
+      dep._removeObserver(this);
     }
   }
 
   @override
-  _addWatcher(watcher) {
+  _addObserver(obs) {
     if (!isActive) {
       for (final dependency in _deps) {
-        dependency._addWatcher(this);
+        dependency._addObserver(this);
       }
     }
 
-    super._addWatcher(watcher);
+    super._addObserver(obs);
   }
 
   @override
-  _removeWatcher(watcher) {
-    super._removeWatcher(watcher);
+  _removeObserver(obs) {
+    super._removeObserver(obs);
 
     if (!isActive) {
       for (final dep in _deps) {
-        dep._removeWatcher(this);
+        dep._removeObserver(this);
       }
     }
   }
 
   @override
   get isDirty {
-    return _deps.any(
-      (dep) => !_depsCache.containsKey(dep) || _depsCache[dep] != dep.get(),
-    );
+    return _deps.length != _depsCache.length ||
+        _deps.any((dep) => _depsCache[dep] != dep.get());
   }
 
   // Schedules an asynchronous broadcast of its recomputed value to its stream listeners
-  // and computable watchers. Scheduling this recomputation asynchronously has a couple advantages:
+  // and computable obss. Scheduling this recomputation asynchronously has a couple advantages:
   //
   // 1. It batches together synchronous updates to multiple dependencies into a single event.
   // 2. It frees up the main isolate to process other pending events before having to perform what could
@@ -120,7 +119,7 @@ mixin Recomputable<T> on Computable<T> {
   @override
   get() {
     if (isDirty) {
-      // If it is active, it schedules a an asynchronous broadcast of its recomptued value.
+      // If it is active, it schedules a an asynchronous broadcast of its recomputed value.
       if (isActive) {
         _scheduleBroadcast();
       }

@@ -268,7 +268,7 @@ void main() {
       });
 
       test(
-        'Stops watching its dependencies when it becomes inactive',
+        'Stops observing its dependencies when it becomes inactive',
         () async {
           final computable1 = Computable(1);
           final computable2 = Computable(2);
@@ -315,7 +315,7 @@ void main() {
           final downstreamSubscription =
               downstreamComputation.stream().listen(null);
 
-          // Now that the computation has a downstream watcher, it should become active again.
+          // Now that the computation has a downstream observer, it should become active again.
           expect(computation.isActive, true);
 
           computable1.add(4);
@@ -328,7 +328,7 @@ void main() {
 
           downstreamSubscription.cancel();
 
-          // Once the downstream computation is canceled, it will stop watching the computation
+          // Once the downstream computation is canceled, it will stop observing the computation
           // and the computation itself will become inactive again.
           expect(computation.isActive, false);
 
