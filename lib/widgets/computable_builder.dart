@@ -1,5 +1,5 @@
 import 'package:computables/computables.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 class ComputableFactoryBuilder<T> extends StatefulWidget {
   final Computable<T> Function() factory;

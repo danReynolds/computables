@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:computables/computables.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import 'utils.dart';
 
@@ -586,6 +586,79 @@ void main() {
         subscriber.stream(),
         emitsInOrder([0, 1]),
       );
+    });
+  });
+
+  group('Benchmark', () {
+    setUpAll(() {
+      print('Benchmarking...');
+    });
+
+    tearDownAll(() {
+      print('Benchmarking complete.');
+    });
+
+    test('Test complex dependency graph resolution', () {
+      final List<Computable> layer1 = [];
+      final List<Computable> layer2 = [];
+      final List<Computable> layer3 = [];
+
+      for (int i = 0; i < 1000; i++) {
+        layer1.add(Computable(i));
+      }
+
+      for (int i = 0; i < 100; i++) {
+        layer2.add(
+          Computation<num>(
+            computables: [...layer1],
+            compute: (values) => values.fold(0, (acc, value) => acc + value),
+          ),
+        );
+      }
+
+      for (int i = 0; i < 100; i++) {
+        layer3.add(
+          Computation<num>(
+            computables: [...layer2],
+            compute: (values) => values.fold(0, (acc, value) => acc + value),
+          ),
+        );
+      }
+
+      final computation = Computation<num>(
+        computables: [...layer3],
+        compute: (values) => values.fold(0, (acc, value) => acc + value),
+      );
+
+      print('Initial get...');
+      var stopwatch = Stopwatch()..start();
+      computation.get();
+      stopwatch.stop();
+
+      print('Elapsed time: ${stopwatch.elapsedMilliseconds}ms');
+
+      expect(stopwatch.elapsedMilliseconds < 200, true);
+
+      print('Mutation...');
+      stopwatch.reset();
+      stopwatch.start();
+      layer1.first.add(layer1.first.get() + 1);
+      computation.get();
+      stopwatch.stop();
+
+      print('Elapsed time: ${stopwatch.elapsedMilliseconds}ms');
+
+      expect(stopwatch.elapsedMilliseconds < 100, true);
+
+      print('Clean get...');
+      stopwatch.reset();
+      stopwatch.start();
+      computation.get();
+      stopwatch.stop();
+
+      print('Elapsed time: ${stopwatch.elapsedMilliseconds}ms');
+
+      expect(stopwatch.elapsedMilliseconds < 100, true);
     });
   });
 }
