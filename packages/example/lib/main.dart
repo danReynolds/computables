@@ -1,4 +1,4 @@
-import 'package:flutter_computables/flutter_computables.dart';
+import 'package:computables_flutter/computables_flutter.dart';
 import 'package:flutter/material.dart';
 
 void main() {

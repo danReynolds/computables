@@ -48,6 +48,13 @@ packages:
       relative: true
     source: path
     version: "5.0.0"
+  computables_flutter:
+    dependency: "direct main"
+    description:
+      path: "../computables_flutter"
+      relative: true
+    source: path
+    version: "1.0.0"
   cupertino_icons:
     dependency: "direct overridden"
     description:
@@ -69,13 +76,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_computables:
-    dependency: "direct main"
-    description:
-      path: "../flutter_computables"
-      relative: true
-    source: path
-    version: "1.0.0"
   flutter_lints:
     dependency: "direct dev"
     description:

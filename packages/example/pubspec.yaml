@@ -30,8 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_computables:
-    path: ../flutter_computables
+  computables_flutter:
+    path: ../computables_flutter
 
 dependency_overrides:
   computables:

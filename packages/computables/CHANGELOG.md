@@ -1,6 +1,6 @@
 ## 5.0.0
 
-* Break out Flutter dependency to separate `flutter_computables` package.
+* Break out Flutter dependency to separate `computables_flutter` package.
 * Refactor computables to be lazy by default.
 
 ## 4.0.1
