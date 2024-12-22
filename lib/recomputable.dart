@@ -22,6 +22,10 @@ mixin Recomputable<T> on Computable<T> {
   /// Whether this computation is scheduled to perform an asynchronous recomputation.
   bool _isScheduled = false;
 
+  /// A global resolver cache is used during the resolution of a computable's value via [get]. It caches the value of computables
+  /// reached during the dependency resolution to prevent duplicate re-accesses of computables reachable from this computable's dependency graph.
+  static Map? _resolverCache;
+
   void _initDeps(List<Computable> dependencies) {
     for (final dependency in dependencies) {
       _addDep(dependency);
@@ -89,10 +93,20 @@ mixin Recomputable<T> on Computable<T> {
     }
   }
 
+  /// Resolves a depedency, caching it in the current resolution's global resolver cache.
+  dynamic _resolveDep(Computable dep) {
+    return _resolverCache![dep] ??= dep.get();
+  }
+
   @override
   get isDirty {
+    // If this resolution has already cached a value for this computable, then it cannot be dirty.
+    if (_resolverCache!.containsKey(this)) {
+      return false;
+    }
+
     return _deps.length != _depsCache.length ||
-        _deps.any((dep) => _depsCache[dep] != dep.get());
+        _deps.any((dep) => _depsCache[dep] != _resolveDep(dep));
   }
 
   // Schedules an asynchronous broadcast of its recomputed value to its stream listeners
@@ -118,19 +132,38 @@ mixin Recomputable<T> on Computable<T> {
 
   @override
   get() {
+    // If this computable is the root of the current [get] resolution, the it is responsible for
+    // initializing and disposing of the resolver cache.
+    bool isRootResolver = false;
+    switch (_resolverCache) {
+      case null:
+        _resolverCache = {};
+        isRootResolver = true;
+        break;
+      case Map cache when cache.containsKey(this):
+        return cache[this];
+    }
+
     if (isDirty) {
-      // If it is active, it schedules a an asynchronous broadcast of its recomputed value.
+      // If it is active, it schedules an asynchronous broadcast of its recomputed value.
       if (isActive) {
         _scheduleBroadcast();
       }
 
-      // Cache the latest values of the computable's dependencies.
+      // Cache the updated values of the dependencies.
       for (final dep in _deps) {
-        _depsCache[dep] = dep.get();
+        final resolvedDep = _resolveDep(dep);
+        if (_depsCache[dep] != resolvedDep) {
+          _depsCache[dep] = resolvedDep;
+        }
       }
 
       // Since the computable was accessed while dirty, it must immediately recompute its value.
       _value = _recompute();
+    }
+
+    if (isRootResolver) {
+      _resolverCache = null;
     }
 
     return _value;
