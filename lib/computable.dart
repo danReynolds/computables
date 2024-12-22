@@ -7,30 +7,27 @@ class Computable<T> {
   late StreamFactory<T> _stream;
 
   bool _isClosed = false;
+  bool _isFirstEvent = true;
 
-  final Set<Recomputable> _dependents = {};
+  /// The set of computable depencies observing changes to this computable.
+  final Set<Recomputable> _observers = {};
 
   late T _value;
+  T? _controllerValue;
 
-  /// Whether the [Computable] can have more than one observable subscription. A single-subscription
-  /// observable will allow one subscriber and will release its resources automatically when its listener cancels its subscription.
-  /// A broadcast observable supports multiple subscribers and must have its resources released manually by calling [dispose].
+  /// Whether the computable can have more than one stream listener using [StreamController.broadcast].
   final bool broadcast;
 
   /// Whether duplicate values should be discarded and not re-emitted to subscribers.
   final bool dedupe;
 
-  /// Whether the [Computable] must always be re-evaluated when checking if it is dirty.
-  bool deepDirtyCheck;
-
   Computable(
     this._value, {
     this.broadcast = false,
     this.dedupe = true,
-    this.deepDirtyCheck = false,
   });
 
-  void _initController() {
+  StreamController<T> _initController() {
     if (broadcast) {
       _controller = StreamController<T>.broadcast();
     } else {
@@ -40,6 +37,8 @@ class Computable<T> {
     _stream = StreamFactory(() {
       return _controller!.stream.startWith(get());
     }, broadcast);
+
+    return _controller!;
   }
 
   /// Private constructor used by [Computation] and [ComputationTransform] to instantiate a [Computable]
@@ -47,32 +46,66 @@ class Computable<T> {
   Computable._({
     this.broadcast = false,
     this.dedupe = true,
-    this.deepDirtyCheck = false,
   });
 
+  /// Disposes the computable, making it unable to add new values and closing its [StreamController].
   void dispose() {
     _isClosed = true;
     _controller?.close();
+
+    // When this computable is disposed, each of its active observers should remove it as a dependency.
+    for (final observer in _observers.toList()) {
+      observer._removeDep(this);
+    }
   }
 
   bool get isClosed {
     return _isClosed;
   }
 
+  bool get isDirty {
+    return false;
+  }
+
+  bool get hasListener {
+    return _controller?.hasListener ?? false;
+  }
+
+  /// A computable is considered active if it either has one or more stream listeners or
+  /// dependent computables observing it.
+  bool get isActive {
+    return hasListener || _observers.isNotEmpty;
+  }
+
+  void _addObserver(Recomputable obs) {
+    _observers.add(obs);
+  }
+
+  void _removeObserver(Recomputable obs) {
+    _observers.remove(obs);
+  }
+
   T add(T updatedValue) {
-    if (isClosed || _value == updatedValue && dedupe) {
-      return _value;
-    }
+    assert(!isClosed, 'Cannot add value to a closed computable.');
 
     _value = updatedValue;
 
-    for (final dep in _dependents) {
-      dep._dirty(true);
+    // Check whether the event should be added to the controller.
+    if (isClosed || (!_isFirstEvent && _value == _controllerValue && dedupe)) {
+      return _value;
     }
 
+    _controllerValue = _value;
+    _isFirstEvent = false;
+
     final controller = _controller;
-    if (controller != null && controller.hasListener) {
-      controller.add(_value);
+    if (hasListener) {
+      controller!.add(_value);
+    }
+
+    /// Schedule all of its observers to recompute.
+    for (final observer in _observers) {
+      observer._scheduleBroadcast();
     }
 
     return _value;
@@ -94,10 +127,6 @@ class Computable<T> {
       _initController();
     }
     return _stream;
-  }
-
-  bool get isDirty {
-    return false;
   }
 
   static Computable<S> fromFuture<S>(

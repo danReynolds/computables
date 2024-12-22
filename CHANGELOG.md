@@ -1,3 +1,7 @@
+## 5.0.0
+
+* Refactor to be lazy by default.
+
 ## 4.0.1
 
 * Fix bug with initial stream value.

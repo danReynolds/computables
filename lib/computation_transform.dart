@@ -14,7 +14,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {
-    init([_computation]);
+    _initDeps([_computation]);
   }
 
   @override
@@ -30,20 +30,14 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
       return innerComputable.get();
     }
 
+    _addDep(innerComputable);
+
     if (_innerComputable != null) {
-      _innerComputable!.dispose();
       _removeDep(_innerComputable!);
     }
 
     _innerComputable = innerComputable;
-    _addDep(innerComputable);
 
     return innerComputable.get();
-  }
-
-  @override
-  dispose() {
-    _computation.dispose();
-    super.dispose();
   }
 }

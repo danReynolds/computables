@@ -1,5 +1,5 @@
 import 'package:computables/computables.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 class ComputableFactoryBuilder<T> extends StatefulWidget {
   final Computable<T> Function() factory;
@@ -24,6 +24,12 @@ class ComputableFactoryBuilderState<T>
   initState() {
     super.initState();
     _computable = widget.factory();
+  }
+
+  @override
+  dispose() {
+    _computable.dispose();
+    super.dispose();
   }
 
   @override
