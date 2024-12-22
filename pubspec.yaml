@@ -6,13 +6,6 @@ homepage: https://github.com/danReynolds/computables
 environment:
   sdk: '>=3.0.6 <4.0.0'
 
-dependencies:
-
 dev_dependencies:
   test: ^1.16.0
   lints: ^2.0.0
-
-dependency_overrides:
-  # Optionally override for local development
-  flutter:
-    sdk: flutter

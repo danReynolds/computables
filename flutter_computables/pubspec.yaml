@@ -1,0 +1,16 @@
+name: flutter_computables
+description: The computables package with Flutter extensions.
+version: 1.0.0
+repository: https://github.com/danReynolds/computables
+
+environment:
+  sdk: '>=3.0.6 <4.0.0'
+
+dependencies:
+  computables: ^5.0.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.24.0
