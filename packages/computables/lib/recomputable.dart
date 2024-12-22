@@ -100,11 +100,6 @@ mixin Recomputable<T> on Computable<T> {
 
   @override
   get isDirty {
-    // If this resolution has already cached a value for this computable, then it cannot be dirty.
-    if (_resolverCache!.containsKey(this)) {
-      return false;
-    }
-
     return _deps.length != _depsCache.length ||
         _deps.any((dep) => _depsCache[dep] != _resolveDep(dep));
   }

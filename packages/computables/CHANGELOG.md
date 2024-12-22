@@ -1,6 +1,7 @@
 ## 5.0.0
 
-* Refactor to be lazy by default.
+* Break out Flutter dependency to separate `flutter_computables` package.
+* Refactor computables to be lazy by default.
 
 ## 4.0.1
 
