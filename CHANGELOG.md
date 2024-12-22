@@ -1,6 +1,6 @@
 ## 5.0.0
 
-* Refactor to lazy by default.
+* Refactor to be lazy by default.
 
 ## 4.0.1
 
