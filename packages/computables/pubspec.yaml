@@ -2,10 +2,11 @@ name: computables
 description: Computables are composable, streamable values.
 version: 5.0.0
 homepage: https://github.com/danReynolds/computables
+resolution: workspace
 
 environment:
-  sdk: '>=3.0.6 <4.0.0'
+  sdk: '>=3.6.0 <4.0.0'
 
 dev_dependencies:
   test: ^1.16.0
-  lints: ^2.0.0
+  lints: ^4.0.0
