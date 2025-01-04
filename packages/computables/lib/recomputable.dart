@@ -148,7 +148,7 @@ mixin Recomputable<T> on Computable<T> {
       // Cache the updated values of the dependencies.
       for (final dep in _deps) {
         final resolvedDep = _resolveDep(dep);
-        if (_depsCache[dep] != resolvedDep) {
+        if (!_depsCache.containsKey(dep) || _depsCache[dep] != resolvedDep) {
           _depsCache[dep] = resolvedDep;
         }
       }

@@ -370,6 +370,39 @@ void main() {
           expect(computation.depLength, 1);
         },
       );
+
+      test(
+        'Caches null values',
+        () {
+          final computable1 = Computable<num?>(null);
+          final computable2 = Computable(2);
+
+          final List<num> values = [];
+
+          final computation = Computable.compute2(
+            computable1,
+            computable2,
+            (input1, input2) => (values..add((input1 ?? 0) + input2)).last,
+          );
+
+          computation.stream().listen(null);
+
+          expect(values.length, 1);
+
+          computable2.add(3);
+
+          expect(computation.get(), 3);
+          expect(values.length, 2);
+
+          expect(computation.get(), 3);
+
+          // The computation should have cached the values for its input computables, even when null.
+          // It therefore should not have recomputed after re-accessing its value.
+          expect(values.length, 2);
+
+          computation.dispose();
+        },
+      );
     },
   );
 

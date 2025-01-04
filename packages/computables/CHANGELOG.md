@@ -1,3 +1,7 @@
+## 5.0.1
+
+* Fix bug with caching dependencies with null values.
+
 ## 5.0.0
 
 * Break out Flutter dependency to separate `computables_flutter` package.
