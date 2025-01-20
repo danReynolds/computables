@@ -16,14 +16,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          sdk: stable
+          flutter-version: stable
 
       - name: Install dependencies
         working-directory: ./packages/computables
-        run: dart pub get
+        run: flutter pub get
 
       - name: Run tests
         working-directory: ./packages/computables
