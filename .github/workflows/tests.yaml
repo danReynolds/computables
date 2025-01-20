@@ -22,9 +22,9 @@ jobs:
           sdk: stable
 
       - name: Install dependencies
-        working-directory: packages/computables
+        working-directory: ./packages/computables
         run: dart pub get
 
       - name: Run tests
-        working-directory: packages/computables
+        working-directory: ./packages/computables
         run: dart test
