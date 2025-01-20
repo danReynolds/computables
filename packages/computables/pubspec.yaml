@@ -1,6 +1,6 @@
 name: computables
 description: Computables are composable, streamable values.
-version: 5.0.1
+version: 5.0.2
 homepage: https://github.com/danReynolds/computables
 resolution: workspace
 

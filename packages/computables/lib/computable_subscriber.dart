@@ -1,4 +1,4 @@
-part of computables;
+part of 'computables.dart';
 
 class ComputableSubscriber<T> extends Computable<T> {
   final List<StreamSubscription> _subscriptions = [];

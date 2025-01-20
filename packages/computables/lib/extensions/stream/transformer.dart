@@ -1,4 +1,4 @@
-part of computables;
+part of '../../computables.dart';
 
 /// StreamTransformer implementation based on Dart docs:
 /// https://api.flutter.dev/flutter/dart-async/StreamTransformer/StreamTransformer.html.

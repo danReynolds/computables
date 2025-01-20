@@ -1,4 +1,4 @@
-part of computables;
+part of 'computables.dart';
 
 /// A mixin that implements the recomputable behavior used by a [Computation] and [ComputationTransform].
 ///
