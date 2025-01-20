@@ -16,17 +16,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Change working directory
-        working-directory: packages/computables
-        run: echo "Changed to packages/computables"
-
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: stable # Use the stable Dart SDK
+          sdk: stable
 
       - name: Install dependencies
+        working-directory: packages/computables
         run: dart pub get
 
       - name: Run tests
+        working-directory: packages/computables
         run: dart test
