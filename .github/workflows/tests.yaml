@@ -22,7 +22,6 @@ jobs:
           flutter-version: stable
 
       - name: Install dependencies
-        working-directory: ./packages/computables
         run: flutter pub get
 
       - name: Run tests
