@@ -12,7 +12,7 @@ class Computation<T> extends Computable<T> with Recomputable<T> {
     required this.computables,
     required this.compute,
     super.broadcast = false,
-    super.dedupe = false,
+    super.dedupe = true,
   }) : super._() {
     _initDeps(computables);
   }

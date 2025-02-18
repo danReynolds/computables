@@ -1,3 +1,7 @@
+## 5.0.2
+
+* Minor cleanup
+
 ## 5.0.1
 
 * Fix bug with caching dependencies with null values.

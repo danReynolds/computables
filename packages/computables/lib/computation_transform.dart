@@ -10,7 +10,7 @@ class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
     required List<Computable> computables,
     required Computable<T> Function(List inputs) transform,
     super.broadcast = false,
-    super.dedupe = false,
+    super.dedupe = true,
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {

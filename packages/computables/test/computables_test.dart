@@ -141,7 +141,6 @@ void main() {
       },
     );
   });
-
   group(
     'Computation',
     () {
@@ -399,8 +398,6 @@ void main() {
           // The computation should have cached the values for its input computables, even when null.
           // It therefore should not have recomputed after re-accessing its value.
           expect(values.length, 2);
-
-          computation.dispose();
         },
       );
     },

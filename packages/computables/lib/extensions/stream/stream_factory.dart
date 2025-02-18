@@ -1,4 +1,4 @@
-part of computables;
+part of '../../computables.dart';
 
 /// Returns a new stream produced by calling [factory] whenever a listener subscribes to the [StreamFactory].
 class StreamFactory<T> extends Stream<T> {
