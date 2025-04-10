@@ -127,10 +127,10 @@ mixin Recomputable<T> on Computable<T> {
 
   @override
   get() {
-    // If this computable is the root of the current [get] resolution, the it is responsible for
-    // initializing and disposing of the resolver cache.
     bool isRootResolver = false;
     switch (_resolverCache) {
+      // If this computable is the root of the current [get] resolution, the it is responsible for
+      // initializing and disposing of the resolver cache.
       case null:
         _resolverCache = {};
         isRootResolver = true;
@@ -139,29 +139,33 @@ mixin Recomputable<T> on Computable<T> {
         return cache[this];
     }
 
-    if (isDirty) {
-      // If it is active, it schedules an asynchronous broadcast of its recomputed value.
-      if (isActive) {
-        _scheduleBroadcast();
-      }
-
-      // Cache the updated values of the dependencies.
-      for (final dep in _deps) {
-        final resolvedDep = _resolveDep(dep);
-        if (!_depsCache.containsKey(dep) || _depsCache[dep] != resolvedDep) {
-          _depsCache[dep] = resolvedDep;
+    try {
+      if (isDirty) {
+        // If it is active, it schedules an asynchronous broadcast of its recomputed value.
+        if (isActive) {
+          _scheduleBroadcast();
         }
+
+        // Cache the updated values of the dependencies.
+        for (final dep in _deps) {
+          final resolvedDep = _resolveDep(dep);
+          if (!_depsCache.containsKey(dep) || _depsCache[dep] != resolvedDep) {
+            _depsCache[dep] = resolvedDep;
+          }
+        }
+
+        // Since the computable was accessed while dirty, it must immediately recompute its value.
+        _value = _recompute();
       }
 
-      // Since the computable was accessed while dirty, it must immediately recompute its value.
-      _value = _recompute();
+      return _value;
+    } finally {
+      // Whether the resolution of the computable's value succeeds or throws an exception, the resolver cache
+      // must always be cleared afterwards.
+      if (isRootResolver) {
+        _resolverCache = null;
+      }
     }
-
-    if (isRootResolver) {
-      _resolverCache = null;
-    }
-
-    return _value;
   }
 
   int get depLength {

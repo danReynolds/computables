@@ -400,6 +400,32 @@ void main() {
           expect(values.length, 2);
         },
       );
+
+      test(
+        'Clears the resolver cache if an exception is thrown during resolution',
+        () {
+          final computable1 = Computable(1);
+          final computable2 = Computable(2);
+
+          final computation = Computable.compute2(
+            computable1,
+            computable2,
+            (input1, input2) {
+              if (input1 == 1) {
+                throw Exception('Test exception');
+              }
+              return input1 + input2;
+            },
+          );
+
+          try {
+            computation.get();
+          } catch (e) {
+            computable1.add(2);
+            expect(computation.get(), 4);
+          }
+        },
+      );
     },
   );
 

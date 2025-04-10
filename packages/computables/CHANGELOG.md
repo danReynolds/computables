@@ -1,3 +1,7 @@
+## 5.0.3
+
+* Fix recomputation error handling bug
+
 ## 5.0.2
 
 * Minor cleanup
