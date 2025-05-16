@@ -11,5 +11,4 @@ part 'computation_transform.dart';
 part 'extensions/stream/stream_factory.dart';
 part 'extensions/stream/start_with.dart';
 part 'extensions/stream/transformer.dart';
-part 'extensions/computable.dart';
 part 'recomputable.dart';
