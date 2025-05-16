@@ -30,3 +30,12 @@ mixin Forwardable<T> on Dependable<T> {
     _addDependency(Computable.fromFuture(future));
   }
 }
+
+class ForwardingComputable<T> extends Computable<T>
+    with Dependable<T>, Forwardable<T> {
+  ForwardingComputable(
+    super.initialValue, {
+    super.broadcast = false,
+    super.dedupe = true,
+  });
+}

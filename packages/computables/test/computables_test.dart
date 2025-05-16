@@ -602,48 +602,35 @@ void main() {
     );
   });
 
-  // group('Subscriber', () {
-  //   test('forwards computable', () async {
-  //     final subscriber = Computable.subscriber(0);
+  group('Forwarder', () {
+    test('forwards computable', () async {
+      final forwarder = Computable.forwarder(0);
+      forwarder.forward(Computable(1));
+      expect(forwarder.get(), 1);
+    });
 
-  //     subscriber.forward(Computable(1));
+    test('forwards stream', () {
+      final subscriber = Computable.forwarder(0);
 
-  //     expect(subscriber.get(), 1);
-  //   });
+      subscriber.forwardStream(Stream.value(1));
 
-  //   test('subscribes to computable', () async {
-  //     int result = 0;
-  //     final subscriber = Computable.subscriber(0);
+      expectLater(
+        subscriber.stream(),
+        emitsInOrder([0, 1]),
+      );
+    });
 
-  //     subscriber.subscribe(Computable(1), (val) {
-  //       result = val;
-  //     });
+    test('forwards future', () {
+      final subscriber = Computable.forwarder(0);
 
-  //     expect(result, 1);
-  //   });
+      subscriber.forwardFuture(Future.value(1));
 
-  //   test('forwards stream', () {
-  //     final subscriber = Computable.subscriber(0);
-
-  //     subscriber.forwardStream(Stream.value(1));
-
-  //     expectLater(
-  //       subscriber.stream(),
-  //       emitsInOrder([0, 1]),
-  //     );
-  //   });
-
-  //   test('forwards future', () {
-  //     final subscriber = Computable.subscriber(0);
-
-  //     subscriber.forwardFuture(Future.value(1));
-
-  //     expectLater(
-  //       subscriber.stream(),
-  //       emitsInOrder([0, 1]),
-  //     );
-  //   });
-  // });
+      expectLater(
+        subscriber.stream(),
+        emitsInOrder([0, 1]),
+      );
+    });
+  });
 
   group('Benchmark', () {
     setUpAll(() {

@@ -250,6 +250,18 @@ class Computable<T> {
     );
   }
 
+  static ForwardingComputable<T> forwarder<T>(
+    T initialValue, {
+    bool broadcast = false,
+    bool dedupe = true,
+  }) {
+    return ForwardingComputable(
+      initialValue,
+      broadcast: broadcast,
+      dedupe: dedupe,
+    );
+  }
+
   Computation<S> map<S>(
     S Function(T value) map, {
     bool broadcast = false,
