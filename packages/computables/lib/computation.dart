@@ -4,8 +4,8 @@ part of 'computables.dart';
 /// value using the provided [compute] function.
 ///
 /// Since calculating a [compute] function can be expensive, a computation's value is is *lazy*, only recomputing
-/// if it is dirty or has an active listener.
-class Computation<T> extends Computable<T> with Dependable<T> {
+/// if it is dirty and has an active listener.
+class Computation<T> extends Computable<T> with Dependencies<T> {
   /// The compute function that computes the derived value of this computable from its input computables.
   final T Function(List inputs) compute;
 

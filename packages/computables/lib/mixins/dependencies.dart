@@ -1,7 +1,7 @@
 part of '../computables.dart';
 
 /// A mixin that enables a [Computable] to depend on other computables.
-mixin Dependable<T> on Computable<T> {
+mixin Dependencies<T> on Computable<T> {
   bool _pendingBroadcast = false;
 
   /// The dependencies of this computable.

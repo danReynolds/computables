@@ -1,7 +1,7 @@
 part of 'computables.dart';
 
 typedef _Optional<T> = T?;
-typedef Dependent = Dependable;
+typedef Dependent = Dependencies;
 
 class Computable<T> {
   StreamController<T>? _controller;

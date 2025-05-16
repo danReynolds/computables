@@ -2,7 +2,7 @@ part of 'computables.dart';
 
 /// A [ComputationTransform] transforms a set of input computables into a single output
 /// computable which it subscribes to and emits values from.
-class ComputationTransform<T> extends Computable<T> with Dependable<T> {
+class ComputationTransform<T> extends Computable<T> with Dependencies<T> {
   final Computation<Computable<T>> _computation;
   Computable<T>? _innerComputable;
 

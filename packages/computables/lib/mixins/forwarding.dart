@@ -2,7 +2,7 @@ part of '../computables.dart';
 
 /// A mixin that enables a [Computable] to forward values from other computables, streams or futures
 /// onto itself.
-mixin Forwardable<T> on Dependable<T> {
+mixin Forwarding<T> on Dependencies<T> {
   @override
   _onDependencyChange(dependency) {
     final value = dependency._value;
@@ -32,7 +32,7 @@ mixin Forwardable<T> on Dependable<T> {
 }
 
 class ForwardingComputable<T> extends Computable<T>
-    with Dependable<T>, Forwardable<T> {
+    with Dependencies<T>, Forwarding<T> {
   ForwardingComputable(
     super.initialValue, {
     super.broadcast = false,
