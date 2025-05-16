@@ -1,6 +1,7 @@
 part of 'computables.dart';
 
 typedef _Optional<T> = T?;
+typedef Dependent = Dependable;
 
 class Computable<T> {
   StreamController<T>? _controller;
@@ -9,8 +10,8 @@ class Computable<T> {
   bool _isClosed = false;
   bool _isFirstEvent = true;
 
-  /// The set of computable depencies observing changes to this computable.
-  final Set<Recomputable> _observers = {};
+  /// The current set of computables observing this computable.
+  final Set<Dependent> _dependents = {};
 
   late T _value;
   T? _controllerValue;
@@ -53,9 +54,9 @@ class Computable<T> {
     _isClosed = true;
     _controller?.close();
 
-    // When this computable is disposed, each of its active observers should remove it as a dependency.
-    for (final observer in _observers.toList()) {
-      observer._removeDep(this);
+    // When this computable is disposed, each of its dependents should remove it as a dependency.
+    for (final dependent in _dependents.toList()) {
+      dependent._removeDependency(this);
     }
   }
 
@@ -63,26 +64,22 @@ class Computable<T> {
     return _isClosed;
   }
 
-  bool get isDirty {
-    return false;
-  }
-
   bool get hasListener {
     return _controller?.hasListener ?? false;
   }
 
-  /// A computable is considered active if it either has one or more stream listeners or
-  /// dependent computables observing it.
+  /// A computable is considered active if it has either client stream listeners or
+  /// computable dependents that must be notified of its changes.
   bool get isActive {
-    return hasListener || _observers.isNotEmpty;
+    return hasListener || _dependents.isNotEmpty;
   }
 
-  void _addObserver(Recomputable obs) {
-    _observers.add(obs);
+  void _addDependent(Dependent dependent) {
+    _dependents.add(dependent);
   }
 
-  void _removeObserver(Recomputable obs) {
-    _observers.remove(obs);
+  void _removeDependent(Dependent dependent) {
+    _dependents.remove(dependent);
   }
 
   T add(T updatedValue) {
@@ -104,8 +101,8 @@ class Computable<T> {
     }
 
     /// Schedule all of its observers to recompute.
-    for (final observer in _observers) {
-      observer._scheduleBroadcast();
+    for (final dependent in _dependents) {
+      dependent._onDependencyChange(this);
     }
 
     return _value;
@@ -158,17 +155,7 @@ class Computable<T> {
     );
   }
 
-  static ComputableSubscriber<S> subscriber<S>(
-    S initialValue, {
-    bool broadcast = false,
-  }) {
-    return ComputableSubscriber(
-      initialValue: initialValue,
-      broadcast: broadcast,
-    );
-  }
-
-  static Computable<T> compute2<T, S1, S2>(
+  static Computation<T> compute2<T, S1, S2>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     T Function(S1 input1, S2 input2) compute, {
@@ -181,7 +168,7 @@ class Computable<T> {
     );
   }
 
-  static Computable<T> compute3<T, S1, S2, S3>(
+  static Computation<T> compute3<T, S1, S2, S3>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,
@@ -195,7 +182,7 @@ class Computable<T> {
     );
   }
 
-  static Computable<T> compute4<T, S1, S2, S3, S4>(
+  static Computation<T> compute4<T, S1, S2, S3, S4>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,
@@ -215,7 +202,7 @@ class Computable<T> {
     );
   }
 
-  static Computable<T> transform2<T, S1, S2>(
+  static ComputationTransform<T> transform2<T, S1, S2>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<T> Function(S1 input1, S2 input2) transform, {
@@ -228,7 +215,7 @@ class Computable<T> {
     );
   }
 
-  static Computable<T> transform3<T, S1, S2, S3>(
+  static ComputationTransform<T> transform3<T, S1, S2, S3>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,
@@ -242,7 +229,7 @@ class Computable<T> {
     );
   }
 
-  static Computable<T> transform4<T, S1, S2, S3, S4>(
+  static ComputationTransform<T> transform4<T, S1, S2, S3, S4>(
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,

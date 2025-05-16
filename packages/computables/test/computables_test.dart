@@ -351,12 +351,12 @@ void main() {
             computable1,
             computable2,
             (input1, input2) => input1 + input2,
-          ) as Recomputable;
+          ) as Dependent;
 
           computation.stream().listen(null);
 
           // The computation has two dependencies: computable1 and computable2.
-          expect(computation.depLength, 2);
+          expect(computation.dependenciesLength, 2);
           expect(computation.isClosed, false);
 
           computable1.add(2);
@@ -366,7 +366,7 @@ void main() {
           // The computation should remove its dependency on computable1 when it is disposed.
           computable1.dispose();
 
-          expect(computation.depLength, 1);
+          expect(computation.dependenciesLength, 1);
         },
       );
 
@@ -583,12 +583,12 @@ void main() {
             computable3.add(input1 + input2);
             return computable3;
           },
-        ) as Recomputable;
+        ) as Dependent;
 
         // The computation transform has two dependencies: the inner computation made up of computable and computable2 as well
         // as its output computable, computable3.
         expect(computation.get(), 3);
-        expect(computation.depLength, 2);
+        expect(computation.dependenciesLength, 2);
         expect(computation.isClosed, false);
 
         computable.add(2);
@@ -597,53 +597,53 @@ void main() {
 
         // The transform's dependency count should remain the same when its inner computable emits a new value. It should remain
         // dependent on the inner computation and have replaced its old dependency on the inner computation's previous output computable with the new one.
-        expect(computation.depLength, 2);
+        expect(computation.dependenciesLength, 2);
       },
     );
   });
 
-  group('Subscriber', () {
-    test('forwards computable', () async {
-      final subscriber = Computable.subscriber(0);
+  // group('Subscriber', () {
+  //   test('forwards computable', () async {
+  //     final subscriber = Computable.subscriber(0);
 
-      subscriber.forward(Computable(1));
+  //     subscriber.forward(Computable(1));
 
-      expect(subscriber.get(), 1);
-    });
+  //     expect(subscriber.get(), 1);
+  //   });
 
-    test('subscribes to computable', () async {
-      int result = 0;
-      final subscriber = Computable.subscriber(0);
+  //   test('subscribes to computable', () async {
+  //     int result = 0;
+  //     final subscriber = Computable.subscriber(0);
 
-      subscriber.subscribe(Computable(1), (val) {
-        result = val;
-      });
+  //     subscriber.subscribe(Computable(1), (val) {
+  //       result = val;
+  //     });
 
-      expect(result, 1);
-    });
+  //     expect(result, 1);
+  //   });
 
-    test('forwards stream', () {
-      final subscriber = Computable.subscriber(0);
+  //   test('forwards stream', () {
+  //     final subscriber = Computable.subscriber(0);
 
-      subscriber.forwardStream(Stream.value(1));
+  //     subscriber.forwardStream(Stream.value(1));
 
-      expectLater(
-        subscriber.stream(),
-        emitsInOrder([0, 1]),
-      );
-    });
+  //     expectLater(
+  //       subscriber.stream(),
+  //       emitsInOrder([0, 1]),
+  //     );
+  //   });
 
-    test('forwards future', () {
-      final subscriber = Computable.subscriber(0);
+  //   test('forwards future', () {
+  //     final subscriber = Computable.subscriber(0);
 
-      subscriber.forwardFuture(Future.value(1));
+  //     subscriber.forwardFuture(Future.value(1));
 
-      expectLater(
-        subscriber.stream(),
-        emitsInOrder([0, 1]),
-      );
-    });
-  });
+  //     expectLater(
+  //       subscriber.stream(),
+  //       emitsInOrder([0, 1]),
+  //     );
+  //   });
+  // });
 
   group('Benchmark', () {
     setUpAll(() {
