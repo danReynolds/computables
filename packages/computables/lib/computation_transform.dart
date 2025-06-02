@@ -9,7 +9,6 @@ class ComputationTransform<T> extends Computable<T> with Dependencies<T> {
   ComputationTransform({
     required List<Computable> computables,
     required Computable<T> Function(List inputs) transform,
-    super.broadcast = false,
     super.dedupe = true,
   })  : _computation =
             Computation(computables: computables, compute: transform),

@@ -16,36 +16,23 @@ class Computable<T> {
   late T _value;
   T? _controllerValue;
 
-  /// Whether the computable can have more than one stream listener using [StreamController.broadcast].
-  final bool broadcast;
-
   /// Whether duplicate values should be discarded and not re-emitted to subscribers.
   final bool dedupe;
 
   Computable(
     this._value, {
-    this.broadcast = false,
     this.dedupe = true,
   });
 
   StreamController<T> _initController() {
-    if (broadcast) {
-      _controller = StreamController<T>.broadcast();
-    } else {
-      _controller = StreamController<T>(onCancel: dispose);
-    }
-
-    _stream = StreamFactory(() {
-      return _controller!.stream.startWith(get());
-    }, broadcast);
-
-    return _controller!;
+    final controller = _controller = StreamController<T>.broadcast();
+    _stream = StreamFactory(() => controller.stream.startWith(get()));
+    return controller;
   }
 
   /// Private constructor used by [Computation] and [ComputationTransform] to instantiate a [Computable]
   /// without needing to provide an initial value.
   Computable._({
-    this.broadcast = false,
     this.dedupe = true,
   });
 
@@ -143,7 +130,6 @@ class Computable<T> {
   static Computable<S> fromStream<S>(
     Stream<S> stream, {
     S? initialValue,
-    bool broadcast = false,
   }) {
     if ((S != _Optional<S>) && initialValue == null) {
       throw 'missing [initialValue] for non-nullable type';
@@ -158,13 +144,11 @@ class Computable<T> {
   static Computation<T> compute2<T, S1, S2>(
     Computable<S1> computable1,
     Computable<S2> computable2,
-    T Function(S1 input1, S2 input2) compute, {
-    bool broadcast = false,
-  }) {
+    T Function(S1 input1, S2 input2) compute,
+  ) {
     return Computation<T>(
       computables: [computable1, computable2],
       compute: (inputs) => compute(inputs[0], inputs[1]),
-      broadcast: broadcast,
     );
   }
 
@@ -172,13 +156,11 @@ class Computable<T> {
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,
-    T Function(S1 input1, S2 input2, S3 input3) compute, {
-    bool broadcast = false,
-  }) {
+    T Function(S1 input1, S2 input2, S3 input3) compute,
+  ) {
     return Computation<T>(
       computables: [computable1, computable2, computable3],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2]),
-      broadcast: broadcast,
     );
   }
 
@@ -192,26 +174,22 @@ class Computable<T> {
       S2 input2,
       S3 input3,
       S4 input4,
-    ) compute, {
-    bool broadcast = false,
-  }) {
+    ) compute,
+  ) {
     return Computation<T>(
       computables: [computable1, computable2, computable3, computable4],
       compute: (inputs) => compute(inputs[0], inputs[1], inputs[2], inputs[3]),
-      broadcast: broadcast,
     );
   }
 
   static ComputationTransform<T> transform2<T, S1, S2>(
     Computable<S1> computable1,
     Computable<S2> computable2,
-    Computable<T> Function(S1 input1, S2 input2) transform, {
-    bool broadcast = false,
-  }) {
+    Computable<T> Function(S1 input1, S2 input2) transform,
+  ) {
     return ComputationTransform<T>(
       computables: [computable1, computable2],
       transform: (inputs) => transform(inputs[0], inputs[1]),
-      broadcast: broadcast,
     );
   }
 
@@ -219,13 +197,11 @@ class Computable<T> {
     Computable<S1> computable1,
     Computable<S2> computable2,
     Computable<S3> computable3,
-    Computable<T> Function(S1 input1, S2 input2, S3 input3) transform, {
-    bool broadcast = false,
-  }) {
+    Computable<T> Function(S1 input1, S2 input2, S3 input3) transform,
+  ) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3],
       transform: (inputs) => transform(inputs[0], inputs[1], inputs[2]),
-      broadcast: broadcast,
     );
   }
 
@@ -239,51 +215,43 @@ class Computable<T> {
       S2 input2,
       S3 input3,
       S4 input4,
-    ) transform, {
-    bool broadcast = false,
-  }) {
+    ) transform,
+  ) {
     return ComputationTransform<T>(
       computables: [computable1, computable2, computable3, computable4],
       transform: (inputs) =>
           transform(inputs[0], inputs[1], inputs[2], inputs[3]),
-      broadcast: broadcast,
     );
   }
 
   static ForwardingComputable<T> forwarder<T>(
     T initialValue, {
-    bool broadcast = false,
     bool dedupe = true,
   }) {
     return ForwardingComputable(
       initialValue,
-      broadcast: broadcast,
       dedupe: dedupe,
     );
   }
 
   Computation<S> map<S>(
     S Function(T value) map, {
-    bool broadcast = false,
     bool? dedupe,
   }) {
     return Computation(
       computables: [this],
       compute: (inputs) => map(inputs.first),
-      broadcast: broadcast,
       dedupe: dedupe ?? this.dedupe,
     );
   }
 
   ComputationTransform<S> transform<S>(
     Computable<S> Function(T value) transform, {
-    bool broadcast = false,
     bool? dedupe,
   }) {
     return ComputationTransform(
       computables: [this],
       transform: (inputs) => transform(inputs.first),
-      broadcast: broadcast,
       dedupe: dedupe ?? this.dedupe,
     );
   }

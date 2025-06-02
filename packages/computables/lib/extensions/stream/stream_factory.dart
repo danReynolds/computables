@@ -3,14 +3,8 @@ part of '../../computables.dart';
 /// Returns a new stream produced by calling [factory] whenever a listener subscribes to the [StreamFactory].
 class StreamFactory<T> extends Stream<T> {
   final Stream<T> Function() factory;
-  final bool _isBroadcast;
 
-  StreamFactory(this.factory, this._isBroadcast);
-
-  @override
-  get isBroadcast {
-    return _isBroadcast;
-  }
+  StreamFactory(this.factory);
 
   @override
   StreamSubscription<T> listen(

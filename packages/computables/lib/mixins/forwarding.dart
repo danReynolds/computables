@@ -35,7 +35,6 @@ class ForwardingComputable<T> extends Computable<T>
     with Dependencies<T>, Forwarding<T> {
   ForwardingComputable(
     super.initialValue, {
-    super.broadcast = false,
     super.dedupe = true,
   });
 }

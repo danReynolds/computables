@@ -28,21 +28,18 @@ void main() {
         computable.add(6);
       });
 
-      test(
-        'Is a non-broadcast stream by default',
-        () {
-          final computable = Computable(2);
-          expect(computable.stream().isBroadcast, false);
-        },
-      );
+      test('Is closed on dispose', () async {
+        final computable = Computable(2);
 
-      test(
-        'Is a broadcast stream when specified',
-        () {
-          final computable = Computable(2, broadcast: true);
-          expect(computable.stream().isBroadcast, true);
-        },
-      );
+        expectLater(computable.stream(), emitsInOrder([2, 4, 6, emitsDone]));
+
+        computable.add(4);
+        await pause();
+        computable.add(6);
+        await pause();
+
+        computable.dispose();
+      });
     });
 
     test('map', () async {
@@ -114,32 +111,6 @@ void main() {
       computable.add(2);
       computable.add(3);
     });
-
-    test(
-      'A non-broadcast computable is disposed when its subscription is canceled',
-      () {
-        final computable = Computable(1);
-
-        final subscription = computable.stream().listen(null);
-
-        expect(computable.isClosed, false);
-        subscription.cancel();
-        expect(computable.isClosed, true);
-      },
-    );
-
-    test(
-      'A broadcast computable is not disposed when a subscription is canceled',
-      () {
-        final computable = Computable(1, broadcast: true);
-
-        final subscription = computable.stream().listen(null);
-
-        expect(computable.isClosed, false);
-        subscription.cancel();
-        expect(computable.isClosed, false);
-      },
-    );
   });
   group(
     'Computation',
@@ -604,9 +575,9 @@ void main() {
 
   group('Forwarder', () {
     test('forwards computable', () async {
-      final forwarder = Computable.forwarder(0);
-      forwarder.forward(Computable(1));
-      expect(forwarder.get(), 1);
+      final computable = Computable.forwarder(0);
+      computable.forward(Computable(1));
+      expect(computable.get(), 1);
     });
 
     test('forwards stream', () {

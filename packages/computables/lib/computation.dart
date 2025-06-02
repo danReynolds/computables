@@ -15,7 +15,6 @@ class Computation<T> extends Computable<T> with Dependencies<T> {
   Computation({
     required this.computables,
     required this.compute,
-    super.broadcast = false,
     super.dedupe = true,
   }) : super._() {
     for (final dependency in computables) {
