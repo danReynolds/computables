@@ -1,6 +1,7 @@
 library computables;
 
 import 'dart:async';
+import 'dart:collection';
 part 'computable_future.dart';
 part 'computable_stream.dart';
 part 'computation.dart';

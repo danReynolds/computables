@@ -50,20 +50,16 @@ mixin Dependencies<T> on Computable<T> {
     final controller = super._initController();
 
     controller.onListen = () {
-      // If this is the computable's first listener, then this computable becomes active and starts
-      // subscribing to changes from its dependencies.
-      if (_dependents.isEmpty) {
-        for (final dependency in _dependencies) {
-          dependency._addDependent(this);
-        }
+      // On adding its first listener, the computable adds itself as a dependent to all of its dependencies.
+      for (final dependency in _dependencies) {
+        dependency._addDependent(this);
       }
     };
     controller.onCancel = () {
-      // If this was the computable's last listener, then it is no longer active and it can stop
-      // depending on changes from its dependencies.
+      // On removing its last listener, the computable removes itself as a dependent from all of its dependencies.
       if (_dependents.isEmpty) {
-        for (final dep in _dependencies) {
-          dep._removeDependent(this);
+        for (final dependency in _dependencies) {
+          dependency._removeDependent(this);
         }
       }
     };
@@ -93,8 +89,9 @@ mixin Dependencies<T> on Computable<T> {
     });
   }
 
+  /// A callback invoked when a dependency of the computable changes its value.
   _onDependencyChange(Computable dependency) {
-    // Schedule a rebroadcast of this computable's value whenever any of its dependencies change.
+    // Schedule a rebroadcast of this computable's value whenever any of its dependencies are updated.
     _scheduleBroadcast();
   }
 }

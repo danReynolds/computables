@@ -20,4 +20,11 @@ class StreamFactory<T> extends Stream<T> {
       cancelOnError: cancelOnError,
     );
   }
+
+  /// A stream factory overrides the broadcast property of a [Stream] to indicate that it can have multiple listeners,
+  /// since it produces a new stream each time a listener subscribes.
+  @override
+  get isBroadcast {
+    return true;
+  }
 }

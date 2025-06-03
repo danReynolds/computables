@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:computables/computables.dart';
 import 'package:test/test.dart';
@@ -19,7 +20,7 @@ void main() {
     });
 
     group("stream", () {
-      test('Emits values on the stream', () {
+      test('emits values on the stream', () {
         final computable = Computable(2);
 
         expectLater(computable.stream(), emitsInOrder([2, 4, 6]));
@@ -28,10 +29,25 @@ void main() {
         computable.add(6);
       });
 
-      test('Is closed on dispose', () async {
+      test('is closed on dispose', () async {
         final computable = Computable(2);
 
         expectLater(computable.stream(), emitsInOrder([2, 4, 6, emitsDone]));
+
+        computable.add(4);
+        await pause();
+        computable.add(6);
+        await pause();
+
+        computable.dispose();
+      });
+
+      test('supports multiple listeners', () async {
+        final computable = Computable(2);
+
+        final stream = computable.stream();
+        expectLater(stream, emitsInOrder([2, 4, 6, emitsDone]));
+        expectLater(stream, emitsInOrder([2, 4, 6, emitsDone]));
 
         computable.add(4);
         await pause();
@@ -578,6 +594,24 @@ void main() {
       final computable = Computable.forwarder(0);
       computable.forward(Computable(1));
       expect(computable.get(), 1);
+    });
+
+    test('forwards computation', () async {
+      final forwarder = Computable.forwarder(0);
+
+      final computable1 = Computable(1);
+      final computable2 = Computable(2);
+      final computation = Computable.compute2(
+        computable1,
+        computable2,
+        (value1, value2) => value1 + value2,
+      );
+
+      forwarder.forward(computation);
+      expect(forwarder.get(), 3);
+
+      computable1.add(2);
+      expect(forwarder.get(), 4);
     });
 
     test('forwards stream', () {
