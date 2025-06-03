@@ -22,12 +22,29 @@ mixin Forwarding<T> on Dependencies<T> {
 
   /// Forwards the values emitted by the stream onto this computable.
   void forwardStream(Stream<T> stream) {
-    _addDependency(Computable.fromStream(stream));
+    _addDependency(Computable.fromStream(stream, initialValue: get()));
   }
 
   /// Forwards the value of the future onto this computable when it resolves.
   void forwardFuture(Future<T> future) {
-    _addDependency(Computable.fromFuture(future));
+    _addDependency(Computable.fromFuture(future, initialValue: get()));
+  }
+
+  @override
+  get() {
+    if (_dependencies.isEmpty) {
+      return super.get();
+    }
+
+    final latestUpdate = (_dependencies.toList()
+          ..sort((a, b) => b.updateIndex.compareTo(a.updateIndex)))
+        .last;
+
+    if (latestUpdate.updateIndex > updateIndex) {
+      return latestUpdate.get();
+    }
+
+    return super.get();
   }
 }
 

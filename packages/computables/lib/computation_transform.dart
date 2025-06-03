@@ -17,6 +17,14 @@ class ComputationTransform<T> extends Computable<T> with Dependencies<T> {
   }
 
   @override
+  get updateIndex {
+    return switch (_innerComputable) {
+      Computation c => max(c.updateIndex, _computation.updateIndex),
+      _ => _computation.updateIndex,
+    };
+  }
+
+  @override
   get() {
     final innerComputable = _computation.get();
 

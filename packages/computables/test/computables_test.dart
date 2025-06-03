@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math';
-
 import 'package:computables/computables.dart';
 import 'package:test/test.dart';
 
@@ -591,13 +589,18 @@ void main() {
 
   group('Forwarder', () {
     test('forwards computable', () async {
-      final computable = Computable.forwarder(0);
-      computable.forward(Computable(1));
-      expect(computable.get(), 1);
+      final forwarder = Computable.forwarder(0);
+
+      expectLater(forwarder.stream(), emitsInOrder([0, 1]));
+
+      forwarder.forward(Computable(1));
+      expect(forwarder.get(), 1);
     });
 
     test('forwards computation', () async {
       final forwarder = Computable.forwarder(0);
+
+      expectLater(forwarder.stream(), emitsInOrder([0, 3, 4]));
 
       final computable1 = Computable(1);
       final computable2 = Computable(2);
@@ -614,26 +617,59 @@ void main() {
       expect(forwarder.get(), 4);
     });
 
-    test('forwards stream', () {
-      final subscriber = Computable.forwarder(0);
+    test('forwards computation transform', () async {
+      final forwarder = Computable.forwarder(0);
 
-      subscriber.forwardStream(Stream.value(1));
+      expectLater(forwarder.stream(), emitsInOrder([0, 3, 7]));
 
-      expectLater(
-        subscriber.stream(),
-        emitsInOrder([0, 1]),
+      final computable1 = Computable(1);
+      final computable2 = Computable(2);
+      Computable<int>? computable3;
+
+      final transform = Computable.transform2(
+        computable1,
+        computable2,
+        (value1, value2) => computable3 = Computable(value1 + value2),
       );
+
+      forwarder.forward(transform);
+      expect(forwarder.get(), 3);
+
+      computable1.add(2);
+      expect(forwarder.get(), 4);
+
+      computable3!.add(5);
+      expect(forwarder.get(), 5);
+
+      computable1.add(3);
+      computable2.add(3);
+
+      /// The forwarder should take both updates into account and return the latest value.
+      expect(forwarder.get(), 6);
+
+      computable3!.add(1);
+      computable1.add(4);
+
+      // The forwarder should favor the change to the underlying input computable over a change on the derived computable.
+      expect(forwarder.get(), 7);
     });
 
-    test('forwards future', () {
-      final subscriber = Computable.forwarder(0);
+    test('forwards stream', () async {
+      final forwarder = Computable.forwarder(0);
+      forwarder.forwardStream(Stream.value(1));
 
-      subscriber.forwardFuture(Future.value(1));
+      expect(forwarder.get(), 0);
+      await pause();
+      expect(forwarder.get(), 1);
+    });
 
-      expectLater(
-        subscriber.stream(),
-        emitsInOrder([0, 1]),
-      );
+    test('forwards future', () async {
+      final forwarder = Computable.forwarder(0);
+      forwarder.forwardFuture(Future.value(1));
+
+      expect(forwarder.get(), 0);
+      await pause();
+      expect(forwarder.get(), 1);
     });
   });
 

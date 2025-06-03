@@ -50,6 +50,11 @@ class Computation<T> extends Computable<T> with Dependencies<T> {
   }
 
   @override
+  get updateIndex {
+    return computables.map((computable) => computable.updateIndex).max();
+  }
+
+  @override
   get() {
     bool isRootResolver = false;
     switch (_resolverCache) {

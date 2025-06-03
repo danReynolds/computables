@@ -19,6 +19,11 @@ class Computable<T> {
   /// Whether duplicate values should be discarded and not re-emitted to subscribers.
   final bool dedupe;
 
+  /// The update index counter used to record the global order of updates across all computables.
+  static int _nextUpdateIndex = 0;
+
+  int _updateIndex = _nextUpdateIndex++;
+
   Computable(
     this._value, {
     this.dedupe = true,
@@ -45,6 +50,10 @@ class Computable<T> {
     for (final dependent in _dependents.toList()) {
       dependent._removeDependency(this);
     }
+  }
+
+  int get updateIndex {
+    return _updateIndex;
   }
 
   bool get isClosed {
@@ -79,6 +88,7 @@ class Computable<T> {
     assert(!isClosed, 'Cannot add value to a closed computable.');
 
     _value = updatedValue;
+    _updateIndex = _nextUpdateIndex++;
 
     // Check whether the event should be added to the controller.
     if (isClosed || (!_isFirstEvent && _value == _controllerValue && dedupe)) {
