@@ -1,42 +1,46 @@
 part of 'computables.dart';
 
-/// A [ComputationTransform] subscribes to a set of input computables and derives
-/// a new output computable from their inputs using the provided [transform] function.
-class ComputationTransform<T> extends Computable<T> with Recomputable<T> {
+/// A [ComputationTransform] transforms a set of input computables into a single output
+/// computable which it subscribes to and emits values from.
+class ComputationTransform<T> extends Computable<T> with Dependencies<T> {
   final Computation<Computable<T>> _computation;
   Computable<T>? _innerComputable;
 
   ComputationTransform({
     required List<Computable> computables,
     required Computable<T> Function(List inputs) transform,
-    super.broadcast = false,
     super.dedupe = true,
   })  : _computation =
             Computation(computables: computables, compute: transform),
         super._() {
-    _initDeps([_computation]);
+    _addDependency(_computation);
   }
 
   @override
-  _recompute() {
+  get updateIndex {
+    return switch (_innerComputable) {
+      Computable c => max(c.updateIndex, _computation.updateIndex),
+      _ => _computation.updateIndex,
+    };
+  }
+
+  @override
+  get() {
     final innerComputable = _computation.get();
 
-    /// A computation transform could be recomputing because either its inner computable
-    /// has emitted a new value or its inner computable has changed. If the inner computable has changed,
-    /// then it disposes the previous inner computable, removing it from its dependencies and switches to the new one.
-    ///
-    /// In either scenario, it then returns the inner computable's latest value.
-    if (identical(innerComputable, _innerComputable)) {
-      return innerComputable.get();
+    // On accessing the transform's value, if its inner computable has changed, then the
+    // transform removes the old inner computable as a dependency and starts depending on the new one.
+    if (!identical(_innerComputable, innerComputable)) {
+      _addDependency(innerComputable);
+
+      // The inner computable is not initialized until the first time the transform value is accessed,
+      // in which case there is no previous dependency to remove.
+      if (_innerComputable != null) {
+        _removeDependency(_innerComputable!);
+      }
+
+      _innerComputable = innerComputable;
     }
-
-    _addDep(innerComputable);
-
-    if (_innerComputable != null) {
-      _removeDep(_innerComputable!);
-    }
-
-    _innerComputable = innerComputable;
 
     return innerComputable.get();
   }
