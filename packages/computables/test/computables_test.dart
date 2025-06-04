@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:computables/computables.dart';
 import 'package:test/test.dart';
-
 import 'utils.dart';
 
 void main() {
@@ -600,7 +599,7 @@ void main() {
     test('forwards computation', () async {
       final forwarder = Computable.forwarder(0);
 
-      expectLater(forwarder.stream(), emitsInOrder([0, 3, 4]));
+      expectLater(forwarder.stream(), emitsInOrder([0, 4]));
 
       final computable1 = Computable(1);
       final computable2 = Computable(2);
@@ -615,12 +614,14 @@ void main() {
 
       computable1.add(2);
       expect(forwarder.get(), 4);
+
+      await pause();
     });
 
     test('forwards computation transform', () async {
       final forwarder = Computable.forwarder(0);
 
-      expectLater(forwarder.stream(), emitsInOrder([0, 3, 7]));
+      expectLater(forwarder.stream(), emitsInOrder([0, 10]));
 
       final computable1 = Computable(1);
       final computable2 = Computable(2);
@@ -652,6 +653,12 @@ void main() {
 
       // The forwarder should favor the change to the underlying input computable over a change on the derived computable.
       expect(forwarder.get(), 7);
+
+      computable1.add(5);
+      forwarder.add(10);
+
+      // The forwarder should favor newer values added directly to it over the older values from its dependencies.
+      expect(forwarder.get(), 10);
     });
 
     test('forwards stream', () async {
@@ -671,6 +678,74 @@ void main() {
       await pause();
       expect(forwarder.get(), 1);
     });
+
+    test(
+      'forwards self-referencing computations',
+      () {
+        final forwarder = Computable.forwarder(0);
+        final computable1 = Computable(1);
+
+        expectLater(forwarder.stream(), emitsInOrder([0, 3]));
+
+        final computation1 = computable1.map((val) {
+          return forwarder.get() + val;
+        });
+
+        forwarder.forward(computation1);
+
+        expect(forwarder.get(), 1);
+
+        computable1.add(2);
+
+        expect(forwarder.get(), 3);
+      },
+    );
+
+    test(
+      'forwards multiple computations',
+      () {
+        final forwarder = Computable.forwarder(0);
+
+        expectLater(forwarder.stream(), emitsInOrder([0, 1, 3, 6]));
+
+        final computable1 = Computable(1);
+        final computable2 = Computable(2);
+
+        final computation1 = computable1.map((val) {
+          return forwarder.get() + val;
+        });
+        final computation2 = computable2.map((val) {
+          return forwarder.get() + val;
+        });
+
+        forwarder.forward(computation1);
+        forwarder.forward(computation2);
+
+        expect(forwarder.get(), 3);
+
+        computable1.add(2);
+        computable2.add(3);
+
+        expect(forwarder.get(), 6);
+      },
+    );
+
+    test(
+      'prioritizes the latest forwarded computable',
+      () {
+        final forwarder = Computable.forwarder(0);
+        final computable1 = Computable(1);
+        final computable2 = Computable(2);
+
+        forwarder.forward(computable1);
+        computable1.add(3);
+        forwarder.forward(computable2);
+
+        // Even though computable1 has been updated after computable2 and has a newer value,
+        // the forwarding of computable2 is considered the latest update to the forwarder.
+        expect(forwarder.get(), 2);
+      },
+    );
   });
 
   group('Benchmark', () {

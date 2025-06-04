@@ -2,7 +2,7 @@ part of '../computables.dart';
 
 /// A mixin that enables a [Computable] to depend on other computables.
 mixin Dependencies<T> on Computable<T> {
-  bool _pendingBroadcast = false;
+  bool _isScheduled = false;
 
   /// The dependencies of this computable.
   final Set<Computable> _dependencies = {};
@@ -78,14 +78,14 @@ mixin Dependencies<T> on Computable<T> {
   // 2. It breaks up dependency rebroadcasts across different ticks of the event loop, freeing
   //    up the isolate to do other work in between.
   void _scheduleBroadcast() {
-    if (_pendingBroadcast) {
+    if (_isScheduled) {
       return;
     }
 
-    _pendingBroadcast = true;
+    _isScheduled = true;
     Future.delayed(Duration.zero, () {
       add(get());
-      _pendingBroadcast = false;
+      _isScheduled = false;
     });
   }
 

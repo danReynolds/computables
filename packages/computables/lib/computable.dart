@@ -78,12 +78,6 @@ class Computable<T> {
     _dependents.remove(dependent);
   }
 
-  void _notifyDependents() {
-    for (final dependent in _dependents) {
-      dependent._onDependencyChange(this);
-    }
-  }
-
   T add(T updatedValue) {
     assert(!isClosed, 'Cannot add value to a closed computable.');
 
@@ -104,7 +98,9 @@ class Computable<T> {
     }
 
     // Notify all dependents that the computable's value has changed.
-    _notifyDependents();
+    for (final dependent in _dependents) {
+      dependent._onDependencyChange(this);
+    }
 
     return _value;
   }

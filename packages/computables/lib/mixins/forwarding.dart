@@ -3,22 +3,12 @@ part of '../computables.dart';
 /// A mixin that enables a [Computable] to forward values from other computables, streams or futures
 /// onto itself.
 mixin Forwarding<T> on Dependencies<T> {
-  /// As soon as a dependency of the forwarding computable changes, it is added to the computable.
-  @override
-  _onDependencyChange(dependency) {
-    final value = dependency._value;
-    if (value is T) {
-      add(value);
-    }
-  }
-
   /// Forwards the values of the provided computable onto this computable, immediately
   /// emitting its current value.
   void forward(Computable<T> computable) {
-    _addDependency(computable);
-
-    // This computable immediately adds the forwarded computable's current value.
     add(computable.get());
+
+    _addDependency(computable);
   }
 
   /// Forwards the values emitted by the stream onto this computable.
@@ -31,20 +21,21 @@ mixin Forwarding<T> on Dependencies<T> {
     _addDependency(Computable.fromFuture(future, initialValue: get()));
   }
 
+  /// A forwarding computable returns the most recently updated value added to it directly
+  /// or from one of its dependencies.
   @override
   get() {
     if (_dependencies.isEmpty) {
       return super.get();
     }
 
-    /// A forwarding computable returns the most recently updated value added to it directly
-    /// or from one of its dependencies.
     final latestUpdate = (_dependencies.toList()
           ..sort((a, b) => b.updateIndex.compareTo(a.updateIndex)))
-        .last;
+        .first;
 
     if (latestUpdate.updateIndex > updateIndex) {
-      return latestUpdate.get();
+      _updateIndex = latestUpdate.updateIndex;
+      _value = latestUpdate.get();
     }
 
     return super.get();

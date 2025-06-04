@@ -70,11 +70,6 @@ class Computation<T> extends Computable<T> with Dependencies<T> {
 
     try {
       if (isDirty) {
-        // If it is active, it schedules an asynchronous broadcast of its recomputed value.
-        if (isActive) {
-          _scheduleBroadcast();
-        }
-
         // Cache the updated values of the computation's dependencies.
         for (final dep in _dependencies) {
           _dependenciesCache[dep] = _resolveDependency(dep);
