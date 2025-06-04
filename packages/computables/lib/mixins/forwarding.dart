@@ -7,7 +7,6 @@ mixin Forwarding<T> on Dependencies<T> {
   /// emitting its current value.
   void forward(Computable<T> computable) {
     add(computable.get());
-
     _addDependency(computable);
   }
 

@@ -2,7 +2,7 @@ part of '../computables.dart';
 
 /// A mixin that enables a [Computable] to depend on other computables.
 mixin Dependencies<T> on Computable<T> {
-  bool _isScheduled = false;
+  bool _isChangeScheduled = false;
 
   /// The dependencies of this computable.
   final Set<Computable> _dependencies = {};
@@ -71,27 +71,23 @@ mixin Dependencies<T> on Computable<T> {
     return _dependencies.length;
   }
 
-  // Schedules a rebroadcast of this computable's value.
-  // Scheduling this recomputation asynchronously has a couple advantages:
-  //
-  // 1. It batches together synchronous updates from multiple dependencies into a single event.
-  // 2. It breaks up dependency rebroadcasts across different ticks of the event loop, freeing
-  //    up the isolate to do other work in between.
-  void _scheduleBroadcast() {
-    if (_isScheduled) {
+  /// A callback invoked when a dependency of the computable changes its value.
+  _onDependencyChange(Computable dependency) {
+    if (_isChangeScheduled) {
       return;
     }
 
-    _isScheduled = true;
+    _isChangeScheduled = true;
+
+    // Schedules an async update of this computable's value as a result of a dependency change.
+    // Scheduling this update asynchronously has a couple advantages:
+    //
+    // 1. It batches together synchronous updates from multiple dependencies into a single event.
+    // 2. It breaks up dependency rebroadcasts across different ticks of the event loop, freeing
+    //    up the isolate to do other work in between.
     Future.delayed(Duration.zero, () {
       add(get());
-      _isScheduled = false;
+      _isChangeScheduled = false;
     });
-  }
-
-  /// A callback invoked when a dependency of the computable changes its value.
-  _onDependencyChange(Computable dependency) {
-    // Schedule a rebroadcast of this computable's value whenever any of its dependencies are updated.
-    _scheduleBroadcast();
   }
 }

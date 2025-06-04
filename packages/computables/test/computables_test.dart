@@ -11,6 +11,7 @@ void main() {
 
     test('add', () {
       final computable = Computable(2);
+
       expect(computable.get(), 2);
       computable.add(3);
       expect(computable.get(), 3);
@@ -20,7 +21,19 @@ void main() {
       test('emits values on the stream', () {
         final computable = Computable(2);
 
-        expectLater(computable.stream(), emitsInOrder([2, 4, 6]));
+        // Computables batch updates within the current task of the event loop.
+        // 4 is an intermediate value in the current task and is not emitted.
+        expectLater(computable.stream(), emitsInOrder([2, 4]));
+
+        computable.add(4);
+      });
+
+      test('does not emit intermediate values on the stream', () {
+        final computable = Computable(2);
+
+        // Computables batch updates within the current task of the event loop.
+        // 4 is an intermediate value in the current task and is not emitted.
+        expectLater(computable.stream(), emitsInOrder([2, 6]));
 
         computable.add(4);
         computable.add(6);
@@ -99,7 +112,7 @@ void main() {
       expectLater(computable.stream(), emitsInOrder([null]));
     });
 
-    test("ignores duplicates by default", () {
+    test("ignores duplicates by default", () async {
       final computable = Computable(1);
 
       expectLater(
@@ -108,11 +121,13 @@ void main() {
       );
 
       computable.add(2);
+      await pause();
       computable.add(2);
+      await pause();
       computable.add(3);
     });
 
-    test("re-emits duplicates when specified", () {
+    test("re-emits duplicates when specified", () async {
       final computable = Computable(1, dedupe: false);
 
       expectLater(
@@ -121,7 +136,9 @@ void main() {
       );
 
       computable.add(2);
+      await pause();
       computable.add(2);
+      await pause();
       computable.add(3);
     });
   });
@@ -139,8 +156,7 @@ void main() {
         );
 
         expect(computation.get(), 0);
-
-        final future = computation.stream().take(4).toList();
+        expectLater(computation.stream(), emitsInOrder([0, 1, 2, 4]));
 
         computable1.add(1);
         expect(computation.get(), 1);
@@ -154,34 +170,28 @@ void main() {
 
         computable2.add(2);
         expect(computation.get(), 4);
-
-        expect(
-          await future,
-          [0, 1, 2, 4],
-        );
       });
 
-      test('Does not broadcast intermediate values from the same task',
-          () async {
-        final computable1 = Computable(0);
-        final computable2 = Computable(0);
+      test(
+        'Does not broadcast intermediate values',
+        () async {
+          final computable1 = Computable(0);
+          final computable2 = Computable(0);
 
-        final computation = Computable.compute2(
-          computable1,
-          computable2,
-          (input1, input2) => input1 + input2,
-        );
+          final computation = Computable.compute2(
+            computable1,
+            computable2,
+            (input1, input2) => input1 + input2,
+          );
 
-        final future = computation.stream().take(2).toList();
+          expect(computation.get(), 0);
+          expectLater(computation.stream(), emitsInOrder([0, 2]));
 
-        expect(computation.get(), 0);
-
-        // This intermediate update in the same task is not broadcast by the computation.
-        computable1.add(1);
-        computable1.add(2);
-
-        expect(await future, [0, 2]);
-      });
+          // This intermediate update in the same task is not broadcast by the computation.
+          computable1.add(1);
+          computable1.add(2);
+        },
+      );
 
       test('Recomputes immediately if accessed synchronously', () {
         final computable = Computable(1);
@@ -246,12 +256,10 @@ void main() {
         await pause();
 
         expect(values.length, 2);
-
-        computation.dispose();
       });
 
       test(
-        'Stops observing its dependencies when it becomes inactive',
+        'Dynamically activates based on active listeners and active dependencies',
         () async {
           final computable1 = Computable(1);
           final computable2 = Computable(2);
@@ -266,6 +274,7 @@ void main() {
 
           expect(computation.isActive, false);
 
+          // The computation is now active, as it has a stream listener.
           final subscription = computation.stream().listen(null);
 
           expect(computation.isActive, true);
@@ -280,7 +289,7 @@ void main() {
           subscription.cancel();
 
           // Now that the listener to the computable's stream has been canceled, the computation is no
-          // longer active and has unsubscribed from automatically receiving updates from its dependencies.
+          // longer active and has stopped receiving automatic updates from its dependencies.
           expect(computation.isActive, false);
 
           computable1.add(3);
@@ -298,7 +307,8 @@ void main() {
           final downstreamSubscription =
               downstreamComputation.stream().listen(null);
 
-          // Now that the computation has a downstream observer, it should become active again.
+          // Now that a computable downstream of this computation has a stream listener
+          // this computation is also active again.
           expect(computation.isActive, true);
 
           computable1.add(4);
@@ -311,8 +321,7 @@ void main() {
 
           downstreamSubscription.cancel();
 
-          // Once the downstream computation is canceled, it will stop observing the computation
-          // and the computation itself will become inactive again.
+          // Once the downstream computation is canceled, this computable is again now inactive.
           expect(computation.isActive, false);
 
           computable1.add(5);
@@ -418,7 +427,7 @@ void main() {
       final computable = Computable(1);
       final computable2 = Computable(2);
 
-      final computation = Computable.transform2(
+      final transform = Computable.transform2(
         computable,
         computable2,
         (input1, input2) {
@@ -426,11 +435,9 @@ void main() {
         },
       );
 
-      final future = computation.stream().take(2).toList();
+      expectLater(transform.stream(), emitsInOrder([1, 4]));
 
       computable2.add(5);
-
-      expect(await future, [1, 4]);
     });
 
     test('immediately returns updated values', () {
@@ -680,7 +687,7 @@ void main() {
     });
 
     test(
-      'forwards self-referencing computations',
+      'forwards self-referencing computations correctly',
       () {
         final forwarder = Computable.forwarder(0);
         final computable1 = Computable(1);
@@ -706,7 +713,7 @@ void main() {
       () {
         final forwarder = Computable.forwarder(0);
 
-        expectLater(forwarder.stream(), emitsInOrder([0, 1, 3, 6]));
+        expectLater(forwarder.stream(), emitsInOrder([0, 6]));
 
         final computable1 = Computable(1);
         final computable2 = Computable(2);
@@ -731,7 +738,7 @@ void main() {
     );
 
     test(
-      'prioritizes the latest forwarded computable',
+      'prioritizes a new forwarded computable',
       () {
         final forwarder = Computable.forwarder(0);
         final computable1 = Computable(1);
@@ -744,6 +751,10 @@ void main() {
         // Even though computable1 has been updated after computable2 and has a newer value,
         // the forwarding of computable2 is considered the latest update to the forwarder.
         expect(forwarder.get(), 2);
+
+        computable2.add(4);
+        computable1.add(5);
+        expect(forwarder.get(), 5);
       },
     );
   });

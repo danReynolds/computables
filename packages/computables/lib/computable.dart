@@ -9,6 +9,7 @@ class Computable<T> {
 
   bool _isClosed = false;
   bool _isFirstEvent = true;
+  bool _eventScheduled = false;
 
   /// The current set of computables observing this computable.
   final Set<Dependent> _dependents = {};
@@ -92,9 +93,17 @@ class Computable<T> {
     _controllerValue = _value;
     _isFirstEvent = false;
 
-    final controller = _controller;
-    if (hasListener) {
-      controller!.add(_value);
+    if (!_eventScheduled) {
+      _eventScheduled = true;
+      Future.delayed(
+        Duration.zero,
+        () {
+          if (hasListener) {
+            _controller!.add(_value);
+          }
+          _eventScheduled = false;
+        },
+      );
     }
 
     // Notify all dependents that the computable's value has changed.
