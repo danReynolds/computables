@@ -109,13 +109,13 @@ that begins with 0 and asynchronously emits the sequence 1, 2, 3, 4.
 
 ## Subscribers
 
-A `ComputableSubscriber` allows a computable to subscribe to changes from other sources like futures, streams, and other computables.
+A computable can forward values from other sources like futures, streams, and other computables.
 
 ```dart
-final subscriber = Computable.subscriber(0);
+final computable = Computable.forwarder(0);
 
-subscriber.forward(Computable.fromStream(Stream.fromIterable([1, 2, 3])));
-subscriber.forwardFuture(Future.delayed(Duration(seconds: 1), () => 4));
+computable.forward(Computable.fromStream(Stream.fromIterable([1, 2, 3])));
+computable.forwardFuture(Future.delayed(Duration(seconds: 1), () => 4));
 
 subscriber.stream().listen((value) {
   print(value);

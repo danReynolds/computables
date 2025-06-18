@@ -1,3 +1,7 @@
+## 6.0.1
+
+* Update README
+
 ## 6.0.0
 
 * Migration of core architecture. Removal of `Recomputable` mixin and `ComputableSubscriber` in favor of `Dependencies` and `Forwarding` mixins.
