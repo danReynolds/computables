@@ -117,7 +117,7 @@ final computable = Computable.forwarder(0);
 computable.forward(Computable.fromStream(Stream.fromIterable([1, 2, 3])));
 computable.forwardFuture(Future.delayed(Duration(seconds: 1), () => 4));
 
-subscriber.stream().listen((value) {
+computable.stream().listen((value) {
   print(value);
   // 0
   // 1
