@@ -107,7 +107,7 @@ Computation.transform2(
 The above transformation takes two computable values as inputs and returns a computable stream of values
 that begins with 0 and asynchronously emits the sequence 1, 2, 3, 4.
 
-## Subscribers
+## Forwardable
 
 A computable can forward values from other sources like futures, streams, and other computables.
 
