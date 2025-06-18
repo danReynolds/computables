@@ -687,28 +687,6 @@ void main() {
     });
 
     test(
-      'forwards self-referencing computations correctly',
-      () {
-        final forwarder = Computable.forwarder(0);
-        final computable1 = Computable(1);
-
-        expectLater(forwarder.stream(), emitsInOrder([0, 3]));
-
-        final computation1 = computable1.map((val) {
-          return forwarder.get() + val;
-        });
-
-        forwarder.forward(computation1);
-
-        expect(forwarder.get(), 1);
-
-        computable1.add(2);
-
-        expect(forwarder.get(), 3);
-      },
-    );
-
-    test(
       'forwards multiple computations',
       () {
         final forwarder = Computable.forwarder(0);

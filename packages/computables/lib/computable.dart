@@ -201,6 +201,69 @@ class Computable<T> {
     );
   }
 
+  static Computation<T> compute5<T, S1, S2, S3, S4, S5>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<S4> computable4,
+    Computable<S5> computable5,
+    T Function(
+      S1 input1,
+      S2 input2,
+      S3 input3,
+      S4 input4,
+      S5 input5,
+    ) compute,
+  ) {
+    return Computation<T>(
+      computables: [
+        computable1,
+        computable2,
+        computable3,
+        computable4,
+        computable5,
+      ],
+      compute: (inputs) =>
+          compute(inputs[0], inputs[1], inputs[2], inputs[3], inputs[4]),
+    );
+  }
+
+  static Computation<T> compute6<T, S1, S2, S3, S4, S5, S6>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<S4> computable4,
+    Computable<S5> computable5,
+    Computable<S6> computable6,
+    T Function(
+      S1 input1,
+      S2 input2,
+      S3 input3,
+      S4 input4,
+      S5 input5,
+      S6 input6,
+    ) compute,
+  ) {
+    return Computation<T>(
+      computables: [
+        computable1,
+        computable2,
+        computable3,
+        computable4,
+        computable5,
+        computable6,
+      ],
+      compute: (inputs) => compute(
+        inputs[0],
+        inputs[1],
+        inputs[2],
+        inputs[3],
+        inputs[4],
+        inputs[5],
+      ),
+    );
+  }
+
   static ComputationTransform<T> transform2<T, S1, S2>(
     Computable<S1> computable1,
     Computable<S2> computable2,
@@ -240,6 +303,74 @@ class Computable<T> {
       computables: [computable1, computable2, computable3, computable4],
       transform: (inputs) =>
           transform(inputs[0], inputs[1], inputs[2], inputs[3]),
+    );
+  }
+
+  static ComputationTransform<T> transform5<T, S1, S2, S3, S4, S5>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<S4> computable4,
+    Computable<S5> computable5,
+    Computable<T> Function(
+      S1 input1,
+      S2 input2,
+      S3 input3,
+      S4 input4,
+      S5 input5,
+    ) transform,
+  ) {
+    return ComputationTransform<T>(
+      computables: [
+        computable1,
+        computable2,
+        computable3,
+        computable4,
+        computable5,
+      ],
+      transform: (inputs) => transform(
+        inputs[0],
+        inputs[1],
+        inputs[2],
+        inputs[3],
+        inputs[4],
+      ),
+    );
+  }
+
+  static ComputationTransform<T> transform6<T, S1, S2, S3, S4, S5, S6>(
+    Computable<S1> computable1,
+    Computable<S2> computable2,
+    Computable<S3> computable3,
+    Computable<S4> computable4,
+    Computable<S5> computable5,
+    Computable<S6> computable6,
+    Computable<T> Function(
+      S1 input1,
+      S2 input2,
+      S3 input3,
+      S4 input4,
+      S5 input5,
+      S6 input6,
+    ) transform,
+  ) {
+    return ComputationTransform<T>(
+      computables: [
+        computable1,
+        computable2,
+        computable3,
+        computable4,
+        computable5,
+        computable6,
+      ],
+      transform: (inputs) => transform(
+        inputs[0],
+        inputs[1],
+        inputs[2],
+        inputs[3],
+        inputs[4],
+        inputs[5],
+      ),
     );
   }
 

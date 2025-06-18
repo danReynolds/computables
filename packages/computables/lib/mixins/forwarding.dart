@@ -33,6 +33,7 @@ mixin Forwarding<T> on Dependencies<T> {
         .first;
 
     if (latestUpdate.updateIndex > updateIndex) {
+      // Mark that this computable is now updated to its latest dependency's index.
       _updateIndex = latestUpdate.updateIndex;
       _value = latestUpdate.get();
     }
