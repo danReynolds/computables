@@ -38,7 +38,7 @@ A computation is a type of computable that composes multiple input computables i
 any other computable value, including futures, streams and other computations.
 
 ```dart
-final computation = Computation.compute2(
+final computation = Computable.compute2(
   Computable.fromStream(Stream.value(1), initialValue: 0),
   Computable.fromFuture(Future.value(2), initialValue: 0),
   (input1, input2) => input1 + input2,
@@ -55,13 +55,13 @@ computable.stream().listen((value) {
 Since a computation is just another type of computable, it can be immediately reused in other computations:
 
 ```dart
-final computation = Computation.compute2(
+final computation = Computable.compute2(
   Computable.fromStream(Stream.value(1), initialValue: 0),
   Computable.fromFuture(Future.value(2), initialValue: 0),
   (input1, input2) => input1 + input2,
 );
 
-Computation.compute2(
+Computable.compute2(
   computation,
   Computable(1),
   (input1, input2) => input1 + input2,
@@ -83,7 +83,7 @@ A transformation maps multiple input values to a new computable that can emit on
 final computable1 = Computable(1);
 final computable2 = Computable(5);
 
-Computation.transform2(
+Computable.transform2(
   computable1,
   computable2,
   (input1, input2) {
