@@ -44,14 +44,14 @@ final computation = Computable.compute2(
   (input1, input2) => input1 + input2,
 );
 
-computable.stream().listen((value) {
+computation.stream().listen((value) {
   print(value);
   // 1
   // 2
 });
 ```
 
-Since a computation is just another type of computable, it can be immediately reused in other computations:
+Since this computation is just another computable, it can be immediately reused in other computations:
 
 ```dart
 final computation = Computable.compute2(
