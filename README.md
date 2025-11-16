@@ -150,7 +150,7 @@ computable.add(3);
 Transform a source computable to a new computable:
 
 ```dart
-final computable = Computable(2);
+final computable = Computable(1);
 
 computable.transform(
   (value) => Computable.fromStream(
@@ -160,9 +160,9 @@ computable.transform(
 ).stream().listen((value) {
   print(value);
   // 0
+  // 1
   // 2
   // 3
-  // 4
 });
 ```
 
