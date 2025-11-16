@@ -155,7 +155,7 @@ final computable = Computable(2);
 
 computable.transform(
   (value) => Computable.fromStream(
-    Stream.iterable([value + 1, value + 2, value + 3]),
+    Stream.iterable([1, 2, 3]),
     initialValue: 0,
   ),
 ).stream().listen((value) {
