@@ -39,16 +39,15 @@ any other computable value, including futures, streams and other computations.
 
 ```dart
 final computation = Computable.compute2(
-  Computable.fromStream(Stream.value(1), initialValue: 0),
-  Computable.fromFuture(Future.value(2), initialValue: 0),
+  Computable(1),
+  Computable.fromFuture(Future.value(1), initialValue: 0),
   (input1, input2) => input1 + input2,
 );
 
 computable.stream().listen((value) {
   print(value);
-  // 0
   // 1
-  // 3
+  // 2
 });
 ```
 
