@@ -113,7 +113,7 @@ A computable can forward values from other sources like futures, streams, and ot
 ```dart
 final computable = Computable.forwarder(0);
 
-computable.forward(Computable.fromStream(Stream.fromIterable([1, 2, 3])));
+computable.forwardStream(Stream.fromIterable([1, 2, 3]));
 computable.forwardFuture(Future.delayed(Duration(seconds: 1), () => 4));
 
 computable.stream().listen((value) {
